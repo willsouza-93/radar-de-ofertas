@@ -1,7 +1,7 @@
-﻿# Radar de Ofertas
+# Radar de Ofertas
 
-Pacote de design e handoff da plataforma de curadoria, aprovacao e publicacao
-de ofertas de afiliados.
+Mecanismo de captura, curadoria, aprovacao e publicacao de ofertas de
+afiliados.
 
 ## Direcao escolhida
 
