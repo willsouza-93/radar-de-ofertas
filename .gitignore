@@ -1,0 +1,42 @@
+﻿# Local environment files
+.env
+.env.*
+!.env.example
+
+# Supabase local runtime
+supabase/.branches/
+supabase/.temp/
+
+# Dependencies
+node_modules/
+
+# Build
+.next/
+out/
+dist/
+build/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Supabase
+.supabase/
+
+# Coverage
+coverage/
+
+# Turbo
+.turbo/
