@@ -1,4 +1,4 @@
-﻿project_id = "radar-de-ofertas"
+project_id = "radar-de-ofertas"
 
 [api]
 enabled = true

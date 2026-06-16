@@ -1,4 +1,4 @@
-﻿# Fase 1 - Plano executavel de implementacao
+# Fase 1 - Plano executavel de implementacao
 
 ## Objetivo
 

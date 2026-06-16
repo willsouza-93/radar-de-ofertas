@@ -1,4 +1,4 @@
-﻿# Execucao local da Fase 1
+# Execucao local da Fase 1
 
 ## Escopo
 

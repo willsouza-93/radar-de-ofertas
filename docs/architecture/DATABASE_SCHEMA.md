@@ -1,4 +1,4 @@
-﻿# Modelo de dados Supabase
+# Modelo de dados Supabase
 
 ## Convencoes
 

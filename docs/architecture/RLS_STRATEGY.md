@@ -1,4 +1,4 @@
-﻿# Estrategia RLS da Fase 1
+# Estrategia RLS da Fase 1
 
 ## Objetivo
 

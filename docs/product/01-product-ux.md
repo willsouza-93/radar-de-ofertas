@@ -1,4 +1,4 @@
-﻿# Visao do produto e fluxos
+# Visao do produto e fluxos
 
 ## Norte de experiencia
 

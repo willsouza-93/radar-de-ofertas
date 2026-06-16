@@ -1,4 +1,4 @@
-﻿# Plano de migrations da Fase 1
+# Plano de migrations da Fase 1
 
 ## Objetivo
 

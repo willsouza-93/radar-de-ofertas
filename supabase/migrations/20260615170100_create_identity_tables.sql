@@ -1,4 +1,4 @@
-﻿create table public.workspaces (
+create table public.workspaces (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   slug extensions.citext not null unique,

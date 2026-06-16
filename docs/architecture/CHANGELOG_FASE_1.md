@@ -1,4 +1,4 @@
-﻿# Changelog da Fase 1
+# Changelog da Fase 1
 
 ## Status
 

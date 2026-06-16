@@ -1,4 +1,4 @@
-﻿# Spike Telegram
+# Spike Telegram
 
 ## Objetivo
 

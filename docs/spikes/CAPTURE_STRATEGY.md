@@ -1,4 +1,4 @@
-﻿# Estrategia de entrada do MVP
+# Estrategia de entrada do MVP
 
 ## Objetivo
 

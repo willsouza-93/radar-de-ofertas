@@ -1,4 +1,4 @@
-﻿# Spike Shopee
+# Spike Shopee
 
 ## Objetivo
 

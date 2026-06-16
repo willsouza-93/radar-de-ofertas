@@ -1,4 +1,4 @@
-﻿# Radar de Ofertas - Especificacao Tecnica MVP-first
+# Radar de Ofertas - Especificacao Tecnica MVP-first
 
 ## Status e fontes oficiais
 

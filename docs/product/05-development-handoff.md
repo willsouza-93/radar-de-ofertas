@@ -1,4 +1,4 @@
-﻿# Handoff de desenvolvimento
+# Handoff de desenvolvimento
 
 ## Stack recomendada
 

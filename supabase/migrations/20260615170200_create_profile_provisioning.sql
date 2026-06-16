@@ -1,4 +1,4 @@
-﻿create or replace function app_private.handle_new_auth_user()
+create or replace function app_private.handle_new_auth_user()
 returns trigger
 language plpgsql
 security definer
