@@ -1,4 +1,4 @@
-﻿# Estrategia de seed da Fase 1
+# Estrategia de seed da Fase 1
 
 ## Objetivo
 

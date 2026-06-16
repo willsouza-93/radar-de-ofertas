@@ -1,4 +1,4 @@
-﻿# Contratos de API e Server Actions
+# Contratos de API e Server Actions
 
 ## Convencoes
 

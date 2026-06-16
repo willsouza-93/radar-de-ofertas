@@ -1,4 +1,4 @@
-﻿# Decisao de scheduler MVP
+# Decisao de scheduler MVP
 
 ## Necessidade
 

@@ -1,4 +1,4 @@
-﻿# Design system
+# Design system
 
 ## Identidade
 

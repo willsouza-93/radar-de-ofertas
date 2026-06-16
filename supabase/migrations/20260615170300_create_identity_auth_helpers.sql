@@ -1,4 +1,4 @@
-﻿create or replace function app_private.is_active_member(target_workspace_id uuid)
+create or replace function app_private.is_active_member(target_workspace_id uuid)
 returns boolean
 language sql
 stable

@@ -1,4 +1,4 @@
-﻿# Modelo de identidade da Fase 1
+# Modelo de identidade da Fase 1
 
 ## Principios
 

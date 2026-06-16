@@ -1,4 +1,4 @@
-﻿# Spike Mercado Livre
+# Spike Mercado Livre
 
 ## Objetivo
 

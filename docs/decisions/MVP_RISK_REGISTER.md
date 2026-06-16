@@ -1,4 +1,4 @@
-﻿# Registro de riscos do MVP
+# Registro de riscos do MVP
 
 ## Escala
 

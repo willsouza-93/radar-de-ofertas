@@ -1,4 +1,4 @@
-﻿# Repository Hygiene Report
+# Repository Hygiene Report
 
 ## Objetivo
 

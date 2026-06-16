@@ -1,4 +1,4 @@
-﻿-- Local/test only. The password below is a fixture and must never be reused.
+-- Local/test only. The password below is a fixture and must never be reused.
 -- Password for all local users: LocalPassword123!
 
 insert into auth.users (

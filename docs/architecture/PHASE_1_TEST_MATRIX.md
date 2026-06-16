@@ -1,4 +1,4 @@
-﻿# Matriz de testes da Fase 1
+# Matriz de testes da Fase 1
 
 ## Objetivo
 

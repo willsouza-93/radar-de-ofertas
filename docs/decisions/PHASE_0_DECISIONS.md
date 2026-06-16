@@ -1,4 +1,4 @@
-﻿# Fase 0 - Decisoes e viabilidade
+# Fase 0 - Decisoes e viabilidade
 
 ## Convencao de pasta
 

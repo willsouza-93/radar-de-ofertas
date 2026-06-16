@@ -1,4 +1,4 @@
-﻿# Catalogo de telas e responsividade
+# Catalogo de telas e responsividade
 
 ## Padrao de especificacao
 

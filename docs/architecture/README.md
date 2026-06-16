@@ -1,4 +1,4 @@
-﻿# Arquitetura do Radar de Ofertas
+# Arquitetura do Radar de Ofertas
 
 Especificacao tecnica MVP-first baseada exclusivamente nos documentos aprovados
 em `/docs/product`.

@@ -1,4 +1,4 @@
-﻿# Estados, permissoes e conteudo
+# Estados, permissoes e conteudo
 
 ## Modelo de permissao
 

@@ -1,4 +1,4 @@
-﻿alter table public.workspaces enable row level security;
+alter table public.workspaces enable row level security;
 alter table public.profiles enable row level security;
 alter table public.workspace_members enable row level security;
 

@@ -57,6 +57,16 @@ afiliados.
 - [Decisoes da Fase 0](docs/decisions/PHASE_0_DECISIONS.md)
 - [Registro de riscos do MVP](docs/decisions/MVP_RISK_REGISTER.md)
 
+### Operacoes
+
+- [Changelog da Fase 1C](docs/operations/CHANGELOG_FASE_1C.md)
+- [Provisionamento Supabase](docs/operations/SUPABASE_PROVISIONING.md)
+- [Provisionamento Vercel](docs/operations/VERCEL_PROVISIONING.md)
+- [Provisionamento GitHub](docs/operations/GITHUB_PROVISIONING.md)
+- [Gestao de secrets](docs/operations/SECRET_MANAGEMENT.md)
+- [Baseline de observabilidade](docs/operations/OBSERVABILITY_BASELINE.md)
+- [Relatorio de validacao da Fase 1C](docs/operations/PHASE_1C_VALIDATION_REPORT.md)
+
 ### Assets
 
 - [Design tokens](docs/assets/design-tokens.json)

@@ -1,4 +1,4 @@
-﻿# Backlog MVP-first
+# Backlog MVP-first
 
 ## Premissas
 

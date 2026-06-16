@@ -1,4 +1,4 @@
-﻿# Supabase local - Fase 1
+# Supabase local - Fase 1
 
 Este diretorio contem somente a fundacao aprovada de Auth, Workspace e RLS.
 

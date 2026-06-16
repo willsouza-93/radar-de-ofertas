@@ -1,4 +1,4 @@
-﻿# Jobs e automacoes
+# Jobs e automacoes
 
 ## Principios
 

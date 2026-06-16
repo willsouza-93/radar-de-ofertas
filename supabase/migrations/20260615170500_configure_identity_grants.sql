@@ -1,4 +1,4 @@
-﻿revoke all on table public.workspaces from public, anon, authenticated;
+revoke all on table public.workspaces from public, anon, authenticated;
 revoke all on table public.profiles from public, anon, authenticated;
 revoke all on table public.workspace_members from public, anon, authenticated;
 

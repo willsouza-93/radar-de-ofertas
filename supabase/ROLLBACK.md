@@ -1,4 +1,4 @@
-﻿# Rollback da Fase 1
+# Rollback da Fase 1
 
 ## Regra geral
 

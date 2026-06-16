@@ -1,4 +1,4 @@
-﻿# Integracoes MVP
+# Integracoes MVP
 
 ## Regra de decisao
 

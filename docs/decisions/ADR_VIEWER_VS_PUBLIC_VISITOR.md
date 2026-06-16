@@ -1,4 +1,4 @@
-﻿# ADR - Viewer interno vs Public Visitor
+# ADR - Viewer interno vs Public Visitor
 
 ## Status
 

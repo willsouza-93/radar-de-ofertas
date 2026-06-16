@@ -1,4 +1,4 @@
-﻿# Checklist de prontidao da Fase 1
+# Checklist de prontidao da Fase 1
 
 ## Objetivo
 

@@ -1,4 +1,4 @@
-﻿# Supabase Auth, RBAC e RLS
+# Supabase Auth, RBAC e RLS
 
 ## Principios obrigatorios
 
