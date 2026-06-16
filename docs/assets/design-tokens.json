@@ -1,0 +1,60 @@
+﻿{
+  "color": {
+    "light": {
+      "bgCanvas": "#F7F9FC",
+      "bgSurface": "#FFFFFF",
+      "bgSubtle": "#F0F4F8",
+      "textPrimary": "#132238",
+      "textSecondary": "#52647A",
+      "borderDefault": "#DDE5ED",
+      "primary": "#155EEF",
+      "success": "#14804A",
+      "warning": "#B54708",
+      "danger": "#C4320A"
+    },
+    "dark": {
+      "bgCanvas": "#0D1421",
+      "bgSurface": "#141E2D",
+      "bgSubtle": "#1B2738",
+      "textPrimary": "#F3F7FB",
+      "textSecondary": "#A8B5C6",
+      "borderDefault": "#2A394D",
+      "primary": "#6C9CFF",
+      "success": "#42D392",
+      "warning": "#F7B955",
+      "danger": "#FF8A70"
+    }
+  },
+  "space": {
+    "1": "2px",
+    "2": "4px",
+    "3": "8px",
+    "4": "12px",
+    "5": "16px",
+    "6": "20px",
+    "7": "24px",
+    "8": "32px",
+    "9": "40px",
+    "10": "48px",
+    "11": "64px",
+    "12": "80px"
+  },
+  "radius": {
+    "small": "6px",
+    "control": "10px",
+    "surface": "14px",
+    "modal": "20px",
+    "pill": "999px"
+  },
+  "motion": {
+    "fast": "120ms",
+    "normal": "180ms",
+    "slow": "240ms",
+    "easing": "cubic-bezier(.2,.8,.2,1)"
+  },
+  "breakpoint": {
+    "mobile": "767px",
+    "tablet": "1279px",
+    "desktop": "1280px"
+  }
+}
