@@ -34,6 +34,22 @@ jobs:
             exit 1
           fi
 
+      - name: Validate tag is contained in main
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag_name="${GITHUB_REF_NAME}"
+          tag_commit="$(git rev-list -n 1 "${tag_name}")"
+
+          git fetch --no-tags origin main
+
+          if ! git merge-base --is-ancestor "${tag_commit}" origin/main; then
+            echo "Tag ${tag_name} points to ${tag_commit}, which is not contained in origin/main."
+            echo "Create releases only from commits that have already landed on main."
+            exit 1
+          fi
+
       - name: Prepare release notes prefix
         shell: bash
         run: |
