@@ -1,16 +1,16 @@
 # Phase 1C Validation Report
 
-Data: 2026-06-16
+Data: 2026-06-17
 
 ## Resultado executivo
 
 | Area | Status | Observacao |
 | --- | --- | --- |
-| Local | Aprovado | Supabase local e testes RLS passaram |
-| Supabase remoto | Aprovado com pendencia | Migrations aplicadas; ambiente remoto ainda precisa ser classificado como staging/dev ou production |
-| Vercel | Pendente | Projeto validado; CLI e env vars nao configurados |
-| GitHub | Parcial | Workflow criado localmente; precisa rodar apos push/PR |
-| Secrets | Pendente | Nenhum valor real configurado ou registrado |
+| Local | Aprovado | Local e o ambiente dev |
+| Supabase remoto | Aprovado | Projeto `rzakjytqfyjwdmnxhbxz` oficialmente classificado como staging |
+| Vercel | Aprovado para Preview/Staging | Env vars publicas de runtime configuradas para apontar ao Supabase staging |
+| GitHub | Aprovado | Workflow da Fase 1C rodou e passou apos merge na `main` |
+| Secrets | Aprovado para o escopo atual | Nao ha GitHub Secrets nem service role necessarios neste momento |
 
 ## Validacao local
 
@@ -35,6 +35,7 @@ Projeto:
 
 - `rzakjytqfyjwdmnxhbxz`
 - `https://rzakjytqfyjwdmnxhbxz.supabase.co`
+- Ambiente oficial: `staging`
 
 Validado:
 
@@ -46,6 +47,16 @@ Validado:
 - RBAC contem somente `admin` e `editor`.
 - Nenhum seed remoto aplicado.
 
+Decisoes registradas:
+
+- Local = dev.
+- Supabase remoto atual = staging.
+- Production = futuro.
+- Nao havera dois ambientes Supabase remotos neste momento.
+- O Supabase staging deve ser usado apenas para validacao integrada/staging.
+- Migrations remotas futuras devem ocorrer em workflow separado ou operacao manual controlada apos merge na `main`.
+- Seeds de fixture com usuarios/senhas genericas nao devem ser aplicados em staging/producao.
+
 ## Validacao Vercel
 
 Validado:
@@ -53,14 +64,19 @@ Validado:
 - Projeto `radar-de-ofertas` existe.
 - Scope `willsouza-93s-projects` existe.
 - Project ID observado: `prj_PntR6g6mec9uEbT8UIiZqutNj240`.
+- Preview/Staging usa o Supabase staging.
+- Env vars publicas de runtime configuradas na Vercel:
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- Variaveis runtime da aplicacao permanecem sem sufixo; o valor muda por ambiente dentro da Vercel.
+- Vercel Production ainda nao representa producao real do produto.
 
-Nao validado/configurado:
+Nao configurado por decisao:
 
 - Vercel CLI local.
-- Variaveis de ambiente.
-- Deploy funcional.
+- `SUPABASE_SERVICE_ROLE_KEY`, pois ainda nao ha necessidade server-side real.
 
-Motivo: CLI ausente e valores reais de secrets nao devem ser inferidos nem registrados.
+Motivo: CLI nao e requisito para iniciar a Fase 2A, e valores reais de secrets nao devem ser inferidos nem registrados.
 
 ## Validacao GitHub
 
@@ -69,22 +85,26 @@ Validado:
 - Repositorio remoto existe.
 - Default branch `main`.
 - PR #1 observado como merged.
-- GitHub CLI autenticado anteriormente no ambiente.
+- PR #2 observado como merged na `main`.
+- Workflow `Phase 1 Validation` rodou na `main` apos merge com status `success`.
+- Run observado: `27655463039`.
+- GitHub CLI autenticado no ambiente.
 
 Criado:
 
 - `.github/workflows/phase-1-validation.yml`
 
-Bloqueio observado:
+Bloqueio resolvido:
 
-- Push rejeitado porque o token OAuth atual do GitHub CLI nao possui escopo `workflow`.
+- Token OAuth do GitHub CLI foi atualizado com escopo `workflow`.
+- Branch `feature/phase-1c-provisioning` foi publicado.
+- PR #2 foi aberto e mergeado.
 
-Pendente:
+Decisoes registradas:
 
-- Reautenticar GitHub CLI com escopo `workflow`.
-- Push da branch.
-- Abertura de PR.
-- Execucao do workflow no GitHub Actions.
+- PR CI continua usando Supabase local.
+- CI de pull request nao deve usar Supabase remoto.
+- GitHub Secrets nao sao necessarios para o workflow atual.
 
 ## Validacao de acesso obrigatoria
 
@@ -99,14 +119,25 @@ Pendente:
 
 ## Pendencias operacionais
 
-- Confirmar natureza do projeto Supabase remoto.
-- Configurar secrets Vercel.
-- Reautenticar GitHub CLI com escopo `workflow` para publicar o workflow.
-- Decidir se GitHub Actions precisara de secrets para deploy ou migracoes remotas.
-- Validar workflow no GitHub Actions apos PR.
+Pendencias encerradas:
+
+- Natureza do Supabase remoto confirmada como staging.
+- Env vars publicas de runtime configuradas na Vercel para Preview/Staging.
+- Workflow da Fase 1C validado na `main`.
+- GitHub CLI reautenticado com escopo `workflow`.
+- PR #2 publicado e mergeado.
+
+Pendencias adiadas, nao bloqueadoras:
+
+- Production real do produto.
+- Segundo ambiente Supabase remoto.
+- `SUPABASE_SERVICE_ROLE_KEY`.
+- GitHub Secrets para deploy/migracoes remotas.
+- Workflow separado para migrations remotas futuras.
+- Vercel CLI local.
 
 ## Gate
 
-`READY_FOR_PHASE_2`: Nao.
+`READY_FOR_PHASE_2A`: Sim.
 
-Motivo: Vercel e secrets ainda exigem acoes manuais antes de iniciar desenvolvimento aplicacional com ambientes completos.
+Motivo: a fundacao local, o Supabase staging, a Vercel Preview/Staging e o workflow de validacao estao suficientes para iniciar a Fase 2A sem depender de producao real ou secrets server-side.

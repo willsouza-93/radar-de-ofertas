@@ -26,7 +26,9 @@ vercel env ls
 
 Foi observado um deployment de producao com status `ERROR`.
 
-Interpretacao: a Fase 1 ainda nao contem aplicacao Next.js/UI. Portanto, o erro de deployment nao indica regressao de funcionalidade do produto, mas deve ser tratado antes de qualquer deploy aplicacional real.
+Interpretacao: a Fase 1 ainda nao contem aplicacao Next.js/UI. Portanto, o erro historico de deployment nao indica regressao de funcionalidade do produto, mas deve ser tratado quando houver aplicacao real.
+
+Decisao do proprietario: Vercel Production ainda nao representa producao real do produto.
 
 ## GitHub
 
@@ -36,36 +38,31 @@ O projeto Vercel possui deployment associado ao repositorio GitHub do projeto. A
 
 | Variavel | Ambiente | Publica | Uso |
 | --- | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Local, Preview, Production | Sim | URL publica do projeto Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Local, Preview, Production | Sim | Cliente publico Supabase com RLS |
-| `SUPABASE_SERVICE_ROLE_KEY` | Preview, Production | Nao | Acoes server-only estritamente controladas |
+| `NEXT_PUBLIC_SUPABASE_URL` | Local, Preview/Staging | Sim | URL publica do Supabase staging |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Local, Preview/Staging | Sim | Cliente publico Supabase com RLS |
+| `SUPABASE_SERVICE_ROLE_KEY` | Futuro | Nao | Acoes server-only estritamente controladas, quando existirem |
 
 Valores reais nao devem ser versionados.
 
-## Configuracao manual recomendada
+As variaveis runtime da aplicacao nao usam sufixo. O valor muda por ambiente dentro da Vercel.
 
-Usando dashboard Vercel:
+Variaveis de CI/CD, automacao, deploy ou acesso remoto podem usar sufixo do ambiente quando forem necessarias, por exemplo `SUPABASE_ACCESS_TOKEN_STAGING` e `SUPABASE_PROJECT_REF_STAGING`.
 
-1. Abrir o projeto `radar-de-ofertas`.
-2. Acessar Settings > Environment Variables.
-3. Configurar as variaveis por ambiente.
-4. Garantir que `SUPABASE_SERVICE_ROLE_KEY` exista apenas como server-only.
-5. Validar acesso limitado aos secrets conforme politica do projeto.
+## Configuracao atual
 
-Usando CLI:
+Configurado pelo proprietario para Preview/Staging:
 
-```bash
-vercel env add NEXT_PUBLIC_SUPABASE_URL production
-vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production
-vercel env add SUPABASE_SERVICE_ROLE_KEY production
-vercel env add NEXT_PUBLIC_SUPABASE_URL preview
-vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY preview
-vercel env add SUPABASE_SERVICE_ROLE_KEY preview
-```
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Nao configurado por decisao:
+
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Motivo: ainda nao existe necessidade server-side real.
 
 ## Pendencias
 
 - Instalar e autenticar Vercel CLI, se o fluxo por CLI for desejado.
-- Configurar variaveis reais no dashboard ou CLI.
-- Confirmar ambiente de preview/staging.
-- Resolver deployment `ERROR` quando houver aplicacao Next.js no repositorio.
+- Resolver deployment aplicacional quando houver aplicacao Next.js no repositorio.
+- Configurar `SUPABASE_SERVICE_ROLE_KEY` somente quando houver necessidade server-side real.

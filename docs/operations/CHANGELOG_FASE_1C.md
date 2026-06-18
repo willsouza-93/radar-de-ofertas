@@ -1,8 +1,8 @@
 # CHANGELOG Fase 1C
 
-Status: parcialmente implementado, com pendencias operacionais documentadas.
+Status: encerrada e pronta para Fase 2A.
 
-Data: 2026-06-16
+Data: 2026-06-17
 
 ## Escopo
 
@@ -25,6 +25,7 @@ Projeto validado:
 
 - Project Ref: `rzakjytqfyjwdmnxhbxz`
 - Project URL: `https://rzakjytqfyjwdmnxhbxz.supabase.co`
+- Ambiente oficial: `staging`
 - Status observado: `ACTIVE_HEALTHY`
 
 Migrations da Fase 1 aplicadas remotamente:
@@ -40,8 +41,9 @@ Observacao operacional: as migrations foram aplicadas via conector Supabase. O h
 
 ## Nao aplicado
 
-- Seeds remotos nao foram aplicados, porque o ambiente remoto ainda nao foi confirmado como staging/dev e seeds podem criar usuarios ou dados de fixture inadequados para producao.
-- Secrets reais nao foram configurados nem registrados.
+- Seeds remotos nao foram aplicados, porque seeds de fixture com usuarios/senhas genericas nao devem ser aplicados em staging/producao.
+- `SUPABASE_SERVICE_ROLE_KEY` nao foi configurada na Vercel porque ainda nao ha necessidade server-side real.
+- GitHub Secrets nao foram configurados porque o workflow atual usa Supabase local.
 - Vercel CLI nao foi instalado nem autenticado.
 - Supabase CLI local nao foi autenticado/linkado por token.
 
@@ -52,12 +54,17 @@ Observacao operacional: as migrations foram aplicadas via conector Supabase. O h
 - Enums remotos: `app_role` contem somente `admin` e `editor`; `member_status` contem `active`, `suspended` e `invited`.
 - Grants remotos: `anon` sem acesso direto a tabelas internas; `authenticated` com grants minimos.
 - Testes locais: 31 testes de banco/RLS aprovados.
+- GitHub Actions: workflow `Phase 1 Validation` passou na `main` apos merge do PR #2.
+- Vercel Preview/Staging: env vars publicas de runtime configuradas para usar Supabase staging.
 
 ## Pendencias
 
-- Confirmar se o projeto Supabase remoto e production ou staging.
 - Autenticar Supabase CLI e executar link local oficial.
-- Configurar variaveis de ambiente na Vercel.
-- Configurar secrets do GitHub Actions somente se forem necessarios para automacoes futuras.
-- Reautenticar GitHub CLI com escopo `workflow` para permitir push do arquivo `.github/workflows/phase-1-validation.yml`.
-- Abrir PR e mesclar workflow no `main` apos revisao.
+- Instalar/autenticar Vercel CLI somente se o fluxo por CLI for desejado.
+- Configurar `SUPABASE_SERVICE_ROLE_KEY` somente quando houver necessidade server-side real.
+- Configurar GitHub Secrets somente se forem necessarios para deploy, migrations remotas ou automacoes futuras.
+- Criar workflow separado para migrations remotas futuras ou manter operacao manual controlada apos merge na `main`.
+
+## Gate
+
+`READY_FOR_PHASE_2A`: Sim.

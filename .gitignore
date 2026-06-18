@@ -32,6 +32,10 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Codex local agent skills
+.agents/
+skills-lock.json
+
 # Supabase
 .supabase/
 
