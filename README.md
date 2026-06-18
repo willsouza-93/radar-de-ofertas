@@ -66,6 +66,7 @@ afiliados.
 - [Gestao de secrets](docs/operations/SECRET_MANAGEMENT.md)
 - [Baseline de observabilidade](docs/operations/OBSERVABILITY_BASELINE.md)
 - [Relatorio de validacao da Fase 1C](docs/operations/PHASE_1C_VALIDATION_REPORT.md)
+- [Processo de release](docs/operations/RELEASE_PROCESS.md)
 
 ### Assets
 
