@@ -39,6 +39,7 @@ export interface CurationRepository extends MembershipRepository {
     workspaceId: string,
     filters: ApprovalQueueFilters
   ): Promise<{ items: ApprovalQueueItem[]; nextCursor: string | null }>;
+  // Must be implemented atomically: decision, optional note and queue update succeed or fail together.
   applyApprovalDecision(input: {
     decision: ApprovalDecisionRecord;
     note: ReviewNoteRecord | null;

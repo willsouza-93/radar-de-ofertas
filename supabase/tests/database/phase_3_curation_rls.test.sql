@@ -122,18 +122,18 @@ select ok(
 
 select ok(
   has_table_privilege('authenticated', 'public.approval_queue', 'select')
-  and has_table_privilege('authenticated', 'public.approval_queue', 'insert')
-  and has_table_privilege('authenticated', 'public.approval_queue', 'update')
+  and not has_table_privilege('authenticated', 'public.approval_queue', 'insert')
+  and not has_table_privilege('authenticated', 'public.approval_queue', 'update')
   and not has_table_privilege('authenticated', 'public.approval_queue', 'delete'),
-  'authenticated has queue grants needed for curator RLS but no delete'
+  'authenticated can read approval_queue but cannot mutate status directly'
 );
 
 select ok(
   has_table_privilege('authenticated', 'public.approval_decisions', 'select')
-  and has_table_privilege('authenticated', 'public.approval_decisions', 'insert')
+  and not has_table_privilege('authenticated', 'public.approval_decisions', 'insert')
   and not has_table_privilege('authenticated', 'public.approval_decisions', 'update')
   and not has_table_privilege('authenticated', 'public.approval_decisions', 'delete'),
-  'approval_decisions is append-only for authenticated clients'
+  'authenticated can read approval_decisions but cannot insert decisions directly'
 );
 
 select ok(
@@ -142,6 +142,20 @@ select ok(
   and not has_table_privilege('authenticated', 'public.review_notes', 'update')
   and not has_table_privilege('authenticated', 'public.review_notes', 'delete'),
   'review_notes is append-only for authenticated clients'
+);
+
+select ok(
+  has_function_privilege(
+    'authenticated',
+    'public.apply_approval_decision(uuid, public.approval_status, public.approval_decision_type, text, text)',
+    'execute'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.apply_approval_decision(uuid, public.approval_status, public.approval_decision_type, text, text)',
+    'execute'
+  ),
+  'only authenticated clients can execute the official approval decision function'
 );
 
 set local role authenticated;
@@ -221,85 +235,107 @@ select results_eq(
 );
 
 select results_eq(
-  $$with decision as (
-      insert into public.approval_decisions (
-        id,
-        workspace_id,
-        queue_id,
-        offer_id,
-        decision,
-        previous_status,
-        next_status,
-        decided_by
-      )
-      values (
-        '60000000-0000-0000-0000-000000000901',
-        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-        '50000000-0000-0000-0000-000000000901',
-        '40000000-0000-0000-0000-000000000901',
-        'approved',
-        'pending',
-        'approved',
-        '10000000-0000-0000-0000-000000000002'
-      )
-      returning id, decided_by, decided_at
-    ),
-    updated as (
-      update public.approval_queue as queue
-      set
-        status = 'approved',
-        last_decision_id = decision.id,
-        last_reviewed_by = decision.decided_by,
-        last_reviewed_at = decision.decided_at
-      from decision
-      where queue.id = '50000000-0000-0000-0000-000000000901'
-      returning 1
-    )
-    select count(*)::bigint from updated$$,
+  $$select count(*)::bigint
+    from public.apply_approval_decision(
+      '50000000-0000-0000-0000-000000000901',
+      'pending',
+      'approved',
+      null,
+      'Nota atomica criada junto com aprovacao.'
+    )$$,
   array[1::bigint],
-  'Editor A approves a pending queue row in own workspace'
+  'Editor A approves a pending queue row through the official atomic function'
 );
 
 select results_eq(
-  $$with decision as (
-      insert into public.approval_decisions (
-        id,
-        workspace_id,
-        queue_id,
-        offer_id,
-        decision,
-        previous_status,
-        next_status,
-        reason,
-        decided_by
-      )
-      values (
-        '60000000-0000-0000-0000-000000000902',
-        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-        '50000000-0000-0000-0000-000000000902',
-        '40000000-0000-0000-0000-000000000902',
-        'rejected',
-        'pending',
-        'rejected',
-        'Preco perdeu atratividade durante a revisao.',
-        '10000000-0000-0000-0000-000000000002'
-      )
-      returning id, decided_by, decided_at
-    ),
-    updated as (
-      update public.approval_queue as queue
-      set
-        status = 'rejected',
-        last_decision_id = decision.id,
-        last_reviewed_by = decision.decided_by,
-        last_reviewed_at = decision.decided_at
-      from decision
-      where queue.id = '50000000-0000-0000-0000-000000000902'
-      returning 1
-    )
-    select count(*)::bigint from updated$$,
+  $$select count(*)::bigint
+    from public.apply_approval_decision(
+      '50000000-0000-0000-0000-000000000902',
+      'pending',
+      'rejected',
+      'Preco perdeu atratividade durante a revisao.',
+      null
+    )$$,
   array[1::bigint],
-  'Editor A rejects a pending queue row in own workspace'
+  'Editor A rejects a pending queue row through the official atomic function'
+);
+
+select results_eq(
+  $$select count(*)::bigint
+    from public.approval_queue
+    where id = '50000000-0000-0000-0000-000000000901'
+      and status = 'approved'
+      and last_decision_id is not null
+      and last_reviewed_by = '10000000-0000-0000-0000-000000000002'$$,
+  array[1::bigint],
+  'Official approval updates queue status and audit pointers together'
+);
+
+select results_eq(
+  $$select count(*)::bigint
+    from public.approval_decisions
+    where queue_id = '50000000-0000-0000-0000-000000000901'
+      and decision = 'approved'
+      and previous_status = 'pending'
+      and next_status = 'approved'$$,
+  array[1::bigint],
+  'Official approval records exactly one approval decision'
+);
+
+select results_eq(
+  $$select count(*)::bigint
+    from public.review_notes
+    where queue_id = '50000000-0000-0000-0000-000000000901'
+      and body = 'Nota atomica criada junto com aprovacao.'$$,
+  array[1::bigint],
+  'Official approval inserts optional review note atomically'
+);
+
+select throws_ok(
+  $$update public.approval_queue
+    set status = 'approved'
+    where id = '50000000-0000-0000-0000-000000000001'$$,
+  '42501',
+  null,
+  'Editor A cannot update approval_queue.status directly'
+);
+
+select throws_ok(
+  $$insert into public.approval_decisions (
+      workspace_id,
+      queue_id,
+      offer_id,
+      decision,
+      previous_status,
+      next_status,
+      decided_by
+    )
+    values (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      '50000000-0000-0000-0000-000000000001',
+      '40000000-0000-0000-0000-000000000001',
+      'approved',
+      'pending',
+      'approved',
+      '10000000-0000-0000-0000-000000000002'
+    )$$,
+  '42501',
+  null,
+  'Editor A cannot insert approval_decisions directly'
+);
+
+select throws_ok(
+  $$select *
+    from public.apply_approval_decision(
+      '50000000-0000-0000-0000-000000000901',
+      'pending',
+      'approved',
+      null,
+      null
+    )$$,
+  '40001',
+  null,
+  'Official approval function enforces expectedStatus and blocks approve twice'
 );
 
 select throws_ok(

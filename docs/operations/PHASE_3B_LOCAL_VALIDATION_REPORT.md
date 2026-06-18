@@ -64,7 +64,7 @@ local executado.
 Resultado:
 
 - arquivos: 3
-- testes pgTAP: 94
+- testes pgTAP: 101
 - status: PASS
 
 Arquivos cobertos:
@@ -89,6 +89,10 @@ Resultado:
 - Admin de outro workspace nao acessa dados alheios.
 - `review_notes` nao permite update/delete.
 - `approval_decisions` nao permite update/delete.
+- Admin/Editor nao conseguem alterar `approval_queue.status` diretamente.
+- Admin/Editor nao conseguem inserir `approval_decisions` diretamente.
+- Aprovacao/rejeicao passam por `public.apply_approval_decision`, que aplica
+  decisao, status e nota opcional atomicamente com `expectedStatus`.
 - `workspaceId` nao e aceito nos contratos TypeScript.
 
 ## Staging

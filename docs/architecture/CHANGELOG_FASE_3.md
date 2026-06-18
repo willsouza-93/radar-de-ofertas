@@ -20,6 +20,11 @@ Status: Fase 3B implementada localmente para revisao.
 - Bloqueio para `anon`, usuario suspenso, usuario sem membership e outro
   workspace.
 - `review_notes` append-only, sem update/delete.
+- Hardening de integridade do workflow: Admin/Editor nao podem alterar
+  `approval_queue.status` nem inserir `approval_decisions` diretamente via
+  SQL/PostgREST/Supabase Client.
+- Funcao oficial `public.apply_approval_decision` para aplicar aprovacao ou
+  rejeicao atomicamente com `expectedStatus`.
 - Services TypeScript equivalentes aos contratos da Fase 3:
   - `listApprovalQueue`
   - `getApprovalDetail`
@@ -43,6 +48,7 @@ Status: Fase 3B implementada localmente para revisao.
 - `20260618195230_create_curation_constraints_and_indexes.sql`
 - `20260618195240_enable_curation_rls_and_policies.sql`
 - `20260618195250_configure_curation_grants.sql`
+- `20260618212909_harden_curation_workflow_integrity.sql`
 
 ## Banco de dados
 
@@ -61,6 +67,13 @@ Status: Fase 3B implementada localmente para revisao.
 - `approval_queue`: `SELECT`, `INSERT`, `UPDATE` para Admin/Editor ativos.
 - `approval_decisions`: `SELECT`, `INSERT` para Admin/Editor ativos.
 - `review_notes`: `SELECT`, `INSERT` para Admin/Editor ativos.
+- `approval_queue`: sem `INSERT`, `UPDATE` ou `DELETE` para clientes
+  autenticados.
+- `approval_decisions`: sem `INSERT`, `UPDATE` ou `DELETE` para clientes
+  autenticados.
+- `public.apply_approval_decision`: `EXECUTE` para `authenticated`; a funcao
+  valida membership ativa, role, `expectedStatus`, motivo de rejeicao e aplica
+  decision/status/nota opcional na mesma transacao.
 - Nenhum grant para `anon`.
 - Nenhum `DELETE` exposto.
 - Nenhum `UPDATE` exposto para `approval_decisions` ou `review_notes`.
@@ -100,6 +113,9 @@ Cobertura:
 - `pending -> rejected`;
 - notas append-only;
 - decisoes append-only;
+- bloqueio de update direto em `approval_queue.status`;
+- bloqueio de insert direto em `approval_decisions`;
+- aprovacao/rejeicao pelo caminho oficial atomico;
 - historico cronologico.
 
 ### TypeScript
@@ -155,10 +171,10 @@ Nao foi implementado:
 ## Riscos e limitacoes
 
 - Services TypeScript usam interface de repository, seguindo o padrao da Fase 2.
-  A adaptacao para Supabase client/Server Actions reais deve ser feita quando a
-  UI/backoffice for implementada.
-- As mutacoes de aprovacao/rejeicao devem ser transacionais na implementacao de
-  repository real.
+  A adaptacao para Supabase client/Server Actions reais deve usar
+  `public.apply_approval_decision` ou uma transacao equivalente server-side.
+- As mutacoes de aprovacao/rejeicao foram protegidas contra bypass direto no
+  banco; qualquer adapter futuro deve preservar a atomicidade.
 - Staging nao foi alterado nesta fase.
 
 ## Rollback
