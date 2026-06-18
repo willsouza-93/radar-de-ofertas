@@ -6,6 +6,8 @@ export type AppErrorCode =
   | 'CATEGORY_NOT_FOUND'
   | 'TAG_NOT_FOUND'
   | 'DUPLICATE_CONFLICT'
+  | 'INVALID_TRANSITION'
+  | 'VERSION_CONFLICT'
   | 'MULTIPLE_WORKSPACES_NOT_SUPPORTED';
 
 export class AppError extends Error {

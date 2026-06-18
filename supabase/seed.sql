@@ -449,3 +449,176 @@ set
   discount_percent = excluded.discount_percent,
   coupon_code = excluded.coupon_code,
   free_shipping = excluded.free_shipping;
+
+insert into public.approval_queue (
+  id,
+  workspace_id,
+  offer_id,
+  status,
+  priority_score,
+  last_reviewed_by,
+  last_reviewed_at,
+  created_at,
+  updated_at
+)
+values
+  (
+    '50000000-0000-0000-0000-000000000001',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '40000000-0000-0000-0000-000000000001',
+    'pending',
+    82,
+    null,
+    null,
+    '2026-06-18T09:00:00Z',
+    '2026-06-18T09:00:00Z'
+  ),
+  (
+    '50000000-0000-0000-0000-000000000002',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '40000000-0000-0000-0000-000000000002',
+    'approved',
+    11,
+    '10000000-0000-0000-0000-000000000001',
+    '2026-06-18T10:30:00Z',
+    '2026-06-18T09:30:00Z',
+    '2026-06-18T10:30:00Z'
+  ),
+  (
+    '50000000-0000-0000-0000-000000000003',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '40000000-0000-0000-0000-000000000003',
+    'rejected',
+    25,
+    '10000000-0000-0000-0000-000000000002',
+    '2026-06-18T11:30:00Z',
+    '2026-06-18T10:00:00Z',
+    '2026-06-18T11:30:00Z'
+  ),
+  (
+    '50000000-0000-0000-0000-000000000101',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    '40000000-0000-0000-0000-000000000101',
+    'pending',
+    72,
+    null,
+    null,
+    '2026-06-18T09:00:00Z',
+    '2026-06-18T09:00:00Z'
+  )
+on conflict (id) do update
+set
+  status = excluded.status,
+  priority_score = excluded.priority_score,
+  last_reviewed_by = excluded.last_reviewed_by,
+  last_reviewed_at = excluded.last_reviewed_at,
+  updated_at = excluded.updated_at;
+
+insert into public.approval_decisions (
+  id,
+  workspace_id,
+  queue_id,
+  offer_id,
+  decision,
+  previous_status,
+  next_status,
+  reason,
+  decided_by,
+  decided_at,
+  created_at
+)
+values
+  (
+    '60000000-0000-0000-0000-000000000001',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '50000000-0000-0000-0000-000000000002',
+    '40000000-0000-0000-0000-000000000002',
+    'approved',
+    'pending',
+    'approved',
+    null,
+    '10000000-0000-0000-0000-000000000001',
+    '2026-06-18T10:30:00Z',
+    '2026-06-18T10:30:00Z'
+  ),
+  (
+    '60000000-0000-0000-0000-000000000002',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '50000000-0000-0000-0000-000000000003',
+    '40000000-0000-0000-0000-000000000003',
+    'rejected',
+    'pending',
+    'rejected',
+    'Preco subiu antes da revisao.',
+    '10000000-0000-0000-0000-000000000002',
+    '2026-06-18T11:30:00Z',
+    '2026-06-18T11:30:00Z'
+  )
+on conflict (id) do update
+set
+  decision = excluded.decision,
+  previous_status = excluded.previous_status,
+  next_status = excluded.next_status,
+  reason = excluded.reason,
+  decided_by = excluded.decided_by,
+  decided_at = excluded.decided_at;
+
+update public.approval_queue
+set last_decision_id = '60000000-0000-0000-0000-000000000001'
+where id = '50000000-0000-0000-0000-000000000002';
+
+update public.approval_queue
+set last_decision_id = '60000000-0000-0000-0000-000000000002'
+where id = '50000000-0000-0000-0000-000000000003';
+
+insert into public.review_notes (
+  id,
+  workspace_id,
+  queue_id,
+  offer_id,
+  body,
+  created_by,
+  created_at
+)
+values
+  (
+    '70000000-0000-0000-0000-000000000001',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '50000000-0000-0000-0000-000000000001',
+    '40000000-0000-0000-0000-000000000001',
+    'Cupom validado manualmente. Oferta pronta para revisao final.',
+    '10000000-0000-0000-0000-000000000001',
+    '2026-06-18T09:15:00Z'
+  ),
+  (
+    '70000000-0000-0000-0000-000000000002',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '50000000-0000-0000-0000-000000000002',
+    '40000000-0000-0000-0000-000000000002',
+    'Aprovada como teste de historico local.',
+    '10000000-0000-0000-0000-000000000001',
+    '2026-06-18T10:20:00Z'
+  ),
+  (
+    '70000000-0000-0000-0000-000000000003',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '50000000-0000-0000-0000-000000000003',
+    '40000000-0000-0000-0000-000000000003',
+    'Rejeitada porque a vantagem caiu durante a revisao.',
+    '10000000-0000-0000-0000-000000000002',
+    '2026-06-18T11:20:00Z'
+  ),
+  (
+    '70000000-0000-0000-0000-000000000101',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    '50000000-0000-0000-0000-000000000101',
+    '40000000-0000-0000-0000-000000000101',
+    'Fixture de isolamento do Workspace B.',
+    '10000000-0000-0000-0000-000000000004',
+    '2026-06-18T09:15:00Z'
+  )
+on conflict (id) do update
+set
+  body = excluded.body,
+  created_by = excluded.created_by,
+  created_at = excluded.created_at;
