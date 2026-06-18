@@ -64,7 +64,7 @@ local executado.
 Resultado:
 
 - arquivos: 3
-- testes pgTAP: 101
+- testes pgTAP: 110
 - status: PASS
 
 Arquivos cobertos:
@@ -93,6 +93,12 @@ Resultado:
 - Admin/Editor nao conseguem inserir `approval_decisions` diretamente.
 - Aprovacao/rejeicao passam por `public.apply_approval_decision`, que aplica
   decisao, status e nota opcional atomicamente com `expectedStatus`.
+- `approval_queue` so pode ser criada como `pending`.
+- `approval_decisions` e `review_notes` nao aceitam combinacao queue A com
+  offer B.
+- `approval_queue.last_decision_id` nao aceita decisao de outra queue.
+- `decided_by` e `created_by` sao vinculados ao ator autenticado nos fluxos
+  expostos.
 - `workspaceId` nao e aceito nos contratos TypeScript.
 
 ## Staging

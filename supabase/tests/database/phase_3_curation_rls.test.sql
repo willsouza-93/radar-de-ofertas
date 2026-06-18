@@ -56,6 +56,23 @@ values
     '{}'::jsonb,
     '10000000-0000-0000-0000-000000000001',
     '10000000-0000-0000-0000-000000000001'
+  ),
+  (
+    '40000000-0000-0000-0000-000000000903',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'manual',
+    'phase-3-non-pending',
+    'manual:external:phase-3-non-pending',
+    'https://example.test/phase-3-non-pending',
+    'https://affiliate.example.test/phase-3-non-pending',
+    'Oferta para testar insert nao pendente',
+    39.90,
+    'BRL',
+    40,
+    'mvp-v1',
+    '{}'::jsonb,
+    '10000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000001'
   );
 
 insert into public.approval_queue (
@@ -156,6 +173,24 @@ select ok(
     'execute'
   ),
   'only authenticated clients can execute the official approval decision function'
+);
+
+select throws_ok(
+  $$insert into public.approval_queue (
+      workspace_id,
+      offer_id,
+      status,
+      priority_score
+    )
+    values (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      '40000000-0000-0000-0000-000000000903',
+      'approved',
+      40
+    )$$,
+  '23514',
+  null,
+  'approval_queue rows must be inserted as pending'
 );
 
 set local role authenticated;
@@ -277,9 +312,10 @@ select results_eq(
     where queue_id = '50000000-0000-0000-0000-000000000901'
       and decision = 'approved'
       and previous_status = 'pending'
-      and next_status = 'approved'$$,
+      and next_status = 'approved'
+      and decided_by = '10000000-0000-0000-0000-000000000002'$$,
   array[1::bigint],
-  'Official approval records exactly one approval decision'
+  'Official approval records exactly one approval decision with decided_by = auth.uid()'
 );
 
 select results_eq(
@@ -336,6 +372,78 @@ select throws_ok(
   '40001',
   null,
   'Official approval function enforces expectedStatus and blocks approve twice'
+);
+
+select throws_ok(
+  $$select *
+    from public.apply_approval_decision(
+      '50000000-0000-0000-0000-000000000001',
+      'pending',
+      'rejected',
+      null,
+      null
+    )$$,
+  '23514',
+  null,
+  'Official rejection function rejects missing reason before any partial write'
+);
+
+select results_eq(
+  $$select count(*)::bigint
+    from public.approval_queue
+    where id = '50000000-0000-0000-0000-000000000001'
+      and status = 'pending'
+      and last_decision_id is null$$,
+  array[1::bigint],
+  'Failed official rejection leaves queue unchanged'
+);
+
+select results_eq(
+  $$select count(*)::bigint
+    from public.approval_decisions
+    where queue_id = '50000000-0000-0000-0000-000000000001'$$,
+  array[0::bigint],
+  'Failed official rejection does not create a decision'
+);
+
+select throws_ok(
+  $$insert into public.review_notes (
+      workspace_id,
+      queue_id,
+      offer_id,
+      body,
+      created_by
+    )
+    values (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      '50000000-0000-0000-0000-000000000901',
+      '40000000-0000-0000-0000-000000000901',
+      'Editor tentou criar nota em queue terminal.',
+      '10000000-0000-0000-0000-000000000002'
+    )$$,
+  '42501',
+  null,
+  'Editor A cannot insert review note into terminal queue'
+);
+
+select throws_ok(
+  $$insert into public.review_notes (
+      workspace_id,
+      queue_id,
+      offer_id,
+      body,
+      created_by
+    )
+    values (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      '50000000-0000-0000-0000-000000000001',
+      '40000000-0000-0000-0000-000000000001',
+      'Editor tentou criar nota com created_by diferente.',
+      '10000000-0000-0000-0000-000000000001'
+    )$$,
+  '42501',
+  null,
+  'Editor A cannot insert review note with created_by different from auth.uid()'
 );
 
 select throws_ok(
@@ -519,6 +627,59 @@ select throws_ok(
   '23503',
   null,
   'review_notes rejects offer from another workspace'
+);
+
+select throws_ok(
+  $$insert into public.approval_decisions (
+      workspace_id,
+      queue_id,
+      offer_id,
+      decision,
+      previous_status,
+      next_status,
+      decided_by
+    )
+    values (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      '50000000-0000-0000-0000-000000000001',
+      '40000000-0000-0000-0000-000000000002',
+      'approved',
+      'pending',
+      'approved',
+      '10000000-0000-0000-0000-000000000001'
+    )$$,
+  '23503',
+  null,
+  'approval_decisions rejects queue A with offer B'
+);
+
+select throws_ok(
+  $$update public.approval_queue
+    set last_decision_id = '60000000-0000-0000-0000-000000000001'
+    where id = '50000000-0000-0000-0000-000000000001'$$,
+  '23503',
+  null,
+  'approval_queue.last_decision_id cannot point to a decision from another queue'
+);
+
+select throws_ok(
+  $$insert into public.review_notes (
+      workspace_id,
+      queue_id,
+      offer_id,
+      body,
+      created_by
+    )
+    values (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      '50000000-0000-0000-0000-000000000001',
+      '40000000-0000-0000-0000-000000000002',
+      'Nota com queue A e offer B.',
+      '10000000-0000-0000-0000-000000000001'
+    )$$,
+  '23503',
+  null,
+  'review_notes rejects queue A with offer B'
 );
 
 select results_eq(

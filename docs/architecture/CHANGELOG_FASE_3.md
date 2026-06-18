@@ -25,6 +25,11 @@ Status: Fase 3B implementada localmente para revisao.
   SQL/PostgREST/Supabase Client.
 - Funcao oficial `public.apply_approval_decision` para aplicar aprovacao ou
   rejeicao atomicamente com `expectedStatus`.
+- Hardening relacional final:
+  - toda nova linha em `approval_queue` deve nascer `pending`;
+  - `approval_decisions` nao pode apontar queue A e offer B;
+  - `review_notes` nao pode apontar queue A e offer B;
+  - `approval_queue.last_decision_id` nao pode apontar decisao de outra queue.
 - Services TypeScript equivalentes aos contratos da Fase 3:
   - `listApprovalQueue`
   - `getApprovalDetail`
@@ -49,6 +54,7 @@ Status: Fase 3B implementada localmente para revisao.
 - `20260618195240_enable_curation_rls_and_policies.sql`
 - `20260618195250_configure_curation_grants.sql`
 - `20260618212909_harden_curation_workflow_integrity.sql`
+- `20260618220504_harden_curation_relationship_integrity.sql`
 
 ## Banco de dados
 
@@ -116,6 +122,11 @@ Cobertura:
 - bloqueio de update direto em `approval_queue.status`;
 - bloqueio de insert direto em `approval_decisions`;
 - aprovacao/rejeicao pelo caminho oficial atomico;
+- inserts de queue obrigatoriamente `pending`;
+- bloqueio de relacionamento cruzado queue/offer em decisoes e notas;
+- bloqueio de `last_decision_id` apontando decisao de outra queue;
+- `decided_by` e `created_by` validados contra `auth.uid()` nos fluxos de
+  cliente;
 - historico cronologico.
 
 ### TypeScript

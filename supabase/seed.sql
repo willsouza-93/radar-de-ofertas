@@ -477,23 +477,23 @@ values
     '50000000-0000-0000-0000-000000000002',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     '40000000-0000-0000-0000-000000000002',
-    'approved',
+    'pending',
     11,
-    '10000000-0000-0000-0000-000000000001',
-    '2026-06-18T10:30:00Z',
+    null,
+    null,
     '2026-06-18T09:30:00Z',
-    '2026-06-18T10:30:00Z'
+    '2026-06-18T09:30:00Z'
   ),
   (
     '50000000-0000-0000-0000-000000000003',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     '40000000-0000-0000-0000-000000000003',
-    'rejected',
+    'pending',
     25,
-    '10000000-0000-0000-0000-000000000002',
-    '2026-06-18T11:30:00Z',
+    null,
+    null,
     '2026-06-18T10:00:00Z',
-    '2026-06-18T11:30:00Z'
+    '2026-06-18T10:00:00Z'
   ),
   (
     '50000000-0000-0000-0000-000000000101',
@@ -564,11 +564,21 @@ set
   decided_at = excluded.decided_at;
 
 update public.approval_queue
-set last_decision_id = '60000000-0000-0000-0000-000000000001'
+set
+  status = 'approved',
+  last_decision_id = '60000000-0000-0000-0000-000000000001',
+  last_reviewed_by = '10000000-0000-0000-0000-000000000001',
+  last_reviewed_at = '2026-06-18T10:30:00Z',
+  updated_at = '2026-06-18T10:30:00Z'
 where id = '50000000-0000-0000-0000-000000000002';
 
 update public.approval_queue
-set last_decision_id = '60000000-0000-0000-0000-000000000002'
+set
+  status = 'rejected',
+  last_decision_id = '60000000-0000-0000-0000-000000000002',
+  last_reviewed_by = '10000000-0000-0000-0000-000000000002',
+  last_reviewed_at = '2026-06-18T11:30:00Z',
+  updated_at = '2026-06-18T11:30:00Z'
 where id = '50000000-0000-0000-0000-000000000003';
 
 insert into public.review_notes (
