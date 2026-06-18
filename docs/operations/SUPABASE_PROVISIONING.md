@@ -5,8 +5,16 @@
 - Nome: `radar-de-ofertas`
 - Project Ref: `rzakjytqfyjwdmnxhbxz`
 - Project URL: `https://rzakjytqfyjwdmnxhbxz.supabase.co`
+- Ambiente oficial: `staging`
 - Regiao observada: `sa-east-1`
 - Status observado: `ACTIVE_HEALTHY`
+
+Decisao do proprietario:
+
+- Local = dev.
+- Supabase remoto atual = staging.
+- Production = futuro.
+- Nao havera dois ambientes Supabase remotos neste momento.
 
 ## Validacao de autenticacao
 
@@ -54,7 +62,7 @@ As migrations foram aplicadas via conector Supabase. Depois da aplicacao, o hist
 
 Seeds remotos nao foram aplicados.
 
-Motivo: o projeto remoto ainda nao foi confirmado formalmente como staging/dev ou production. Para evitar criacao de usuarios ou dados de fixture em ambiente real, seeds ficam restritos ao ambiente local ate decisao operacional explicita.
+Motivo: o projeto remoto e staging, mas seeds de fixture com usuarios/senhas genericas nao devem ser aplicados em staging/producao. Seeds ficam restritos ao ambiente local, salvo decisao operacional explicita com dados seguros.
 
 ## Schema remoto validado
 
@@ -110,8 +118,13 @@ npx supabase db diff --linked
 
 Nao executar `supabase db push` sem revisar o diff.
 
+## Migrations remotas futuras
+
+Migrations remotas futuras devem ocorrer apenas apos merge na `main`, por workflow separado ou operacao manual controlada.
+
+O workflow de pull request deve continuar usando Supabase local e nao deve acessar o Supabase staging.
+
 ## Pendencias
 
-- Confirmar classificacao do ambiente remoto: staging/dev ou production.
 - Autenticar e linkar Supabase CLI local.
-- Definir se seeds serao aplicados em um ambiente remoto de staging.
+- Definir workflow separado para migrations remotas futuras, quando necessario.

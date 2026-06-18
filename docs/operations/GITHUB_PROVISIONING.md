@@ -21,6 +21,13 @@ feature/phase-1c-provisioning
 - Nenhum workflow ativo foi listado antes da Fase 1C.
 - Nenhum secret do GitHub Actions foi listado antes da Fase 1C.
 
+## Estado final da Fase 1C
+
+- PR #2 foi mergeado na `main`.
+- Workflow `Phase 1 Validation` rodou apos o merge na `main`.
+- Resultado observado: `success`.
+- Run observado: `27655463039`.
+
 ## Workflow criado
 
 Arquivo:
@@ -40,24 +47,26 @@ Pipeline minima:
 
 O workflow nao usa secrets reais e nao acessa o projeto Supabase remoto.
 
-## Bloqueio de push observado
+Decisao: PR CI deve continuar usando Supabase local. O Supabase staging nao deve ser usado em CI de pull request.
 
-O push do branch foi rejeitado pelo GitHub porque o token OAuth atual do GitHub CLI nao possui escopo `workflow`.
+## Bloqueio de push resolvido
 
-Escopos observados:
+O push inicial do branch foi rejeitado pelo GitHub porque o token OAuth do GitHub CLI nao possuia escopo `workflow`.
+
+Escopos iniciais observados:
 
 ```text
 gist, read:org, repo
 ```
 
-Acao manual necessaria:
+Acao executada:
 
 ```bash
 gh auth refresh -h github.com --scopes workflow --clipboard
 git push -u origin feature/phase-1c-provisioning
 ```
 
-Depois do push, abrir PR contra `main`.
+Depois do push, o PR #2 foi aberto e mergeado contra `main`.
 
 ## Observacao sobre Docker
 
@@ -75,7 +84,5 @@ gh workflow list --repo willsouza-93/radar-de-ofertas
 
 ## Pendencias
 
-- Abrir PR da branch `feature/phase-1c-provisioning`.
-- Aguardar execucao do workflow no GitHub Actions apos push/PR.
-- Reautenticar GitHub CLI com escopo `workflow` antes do push.
 - Configurar secrets apenas quando houver necessidade real de CI/CD remoto com deploy ou migracoes remotas.
+- Criar workflow separado para migrations remotas futuras, se a operacao deixar de ser manual.

@@ -5,6 +5,8 @@
 - Nenhum secret real deve ser registrado no repositorio.
 - Nenhuma service role key deve ser exposta no frontend.
 - Variaveis publicas podem existir no cliente, mas seus valores nao devem ser duplicados em documentacao operacional.
+- Variaveis runtime usadas pela aplicacao devem manter nomes sem sufixo; o valor muda por ambiente dentro da Vercel.
+- Variaveis de CI/CD, automacao, deploy ou acesso remoto podem usar sufixo do ambiente quando forem necessarias.
 - O proprietario atual dos secrets do MVP e Willian Cesar.
 - Antes de entrada em producao com usuarios reais ou ampliacao da equipe, definir segunda identidade independente para recuperacao de acesso.
 
@@ -12,13 +14,14 @@
 
 | Variavel | Ambiente | Onde configurar | Publica | Uso previsto | Acesso |
 | --- | --- | --- | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Local, Preview, Production | `.env.local`, Vercel | Sim | Cliente Supabase no app | Willian Cesar |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Local, Preview, Production | `.env.local`, Vercel | Sim | Cliente Supabase com RLS | Willian Cesar |
-| `SUPABASE_SERVICE_ROLE_KEY` | Preview, Production | Vercel | Nao | Acoes server-only autorizadas | Willian Cesar |
-| `SUPABASE_ACCESS_TOKEN` | Local, GitHub Actions futuro | Terminal local, GitHub Secrets | Nao | Operacoes CLI/CI autorizadas | Willian Cesar |
-| `VERCEL_TOKEN` | GitHub Actions futuro | GitHub Secrets | Nao | Deploy via CI, se adotado | Willian Cesar |
-| `VERCEL_ORG_ID` | GitHub Actions futuro | GitHub Secrets | Nao sensivel, mas privado | Deploy via CI, se adotado | Willian Cesar |
-| `VERCEL_PROJECT_ID` | GitHub Actions futuro | GitHub Secrets | Nao sensivel, mas privado | Deploy via CI, se adotado | Willian Cesar |
+| `NEXT_PUBLIC_SUPABASE_URL` | Local, Preview/Staging | `.env.local`, Vercel | Sim | Cliente Supabase no app | Willian Cesar |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Local, Preview/Staging | `.env.local`, Vercel | Sim | Cliente Supabase com RLS | Willian Cesar |
+| `SUPABASE_SERVICE_ROLE_KEY` | Futuro | Vercel | Nao | Acoes server-only autorizadas, quando existirem | Willian Cesar |
+| `SUPABASE_ACCESS_TOKEN_STAGING` | Futuro | GitHub Secrets | Nao | Operacoes CLI/CI controladas no Supabase staging | Willian Cesar |
+| `SUPABASE_PROJECT_REF_STAGING` | Futuro | GitHub Secrets ou variavel CI | Nao sensivel, mas operacional | Identificar projeto Supabase staging em automacoes | Willian Cesar |
+| `VERCEL_TOKEN` | Futuro | GitHub Secrets | Nao | Deploy via CI, se adotado | Willian Cesar |
+| `VERCEL_ORG_ID` | Futuro | GitHub Secrets | Nao sensivel, mas privado | Deploy via CI, se adotado | Willian Cesar |
+| `VERCEL_PROJECT_ID` | Futuro | GitHub Secrets | Nao sensivel, mas privado | Deploy via CI, se adotado | Willian Cesar |
 | `CRON_SECRET` | Pos-MVP ou jobs futuros | Vercel, GitHub Secrets se necessario | Nao | Protecao de rotas de cron | Willian Cesar |
 | `TELEGRAM_BOT_TOKEN` | Fase futura | Vercel | Nao | Publicacao Telegram | Willian Cesar |
 
@@ -35,17 +38,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<SUPABASE_ANON_KEY>
 
 ## Vercel
 
-Configurar por ambiente:
+Configurado para o escopo atual:
 
-- Preview.
-- Production.
-- Development, se o time decidir usar `vercel env pull`.
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-`SUPABASE_SERVICE_ROLE_KEY` deve ficar disponivel somente para runtime server-side.
+As variaveis acima foram configuradas sem sufixo, seguindo o padrao runtime da aplicacao. O Preview/Staging da Vercel aponta para o Supabase staging.
+
+`SUPABASE_SERVICE_ROLE_KEY` nao deve ser configurada enquanto nao houver necessidade server-side real.
 
 ## GitHub Actions
 
 O workflow da Fase 1C nao exige secrets porque roda Supabase local.
+
+GitHub Secrets nao sao necessarios neste momento.
 
 Secrets GitHub devem ser criados apenas quando houver necessidade de:
 
@@ -63,6 +69,6 @@ Recomendacao MVP:
 
 ## Pendencias
 
-- Configurar variaveis reais na Vercel.
 - Criar `.env.local` local fora do controle de versao quando a aplicacao Next.js existir.
-- Decidir se GitHub Actions tera deploy remoto ou permanecera apenas com validacao local.
+- Criar `SUPABASE_SERVICE_ROLE_KEY` somente quando houver necessidade server-side real.
+- Criar GitHub Secrets apenas quando houver workflow separado para deploy ou migrations remotas.
