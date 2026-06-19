@@ -43,7 +43,7 @@ export function OfferTable({ offers }: { offers: OfferListItem[] }) {
           </tbody>
         </table>
       </div>
-      <div className="grid" style={{ marginTop: '1rem' }}>
+      <div className="mobile-card-list grid" style={{ marginTop: '1rem' }}>
         {offers.map((offer) => <OfferCard key={offer.id} offer={offer} href={`/offers/${offer.id}`} />)}
       </div>
     </>

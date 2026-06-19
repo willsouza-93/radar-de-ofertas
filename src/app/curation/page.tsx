@@ -59,7 +59,11 @@ export default function CurationPage({
                 </Button>
               ))}
             </nav>
-            <OfferFilters categories={options.categories} showDiscount={false} />
+            <OfferFilters
+              categories={options.categories}
+              showDiscount={false}
+              hiddenFields={[{ name: 'status', value: selectedStatus }]}
+            />
             <div style={{ marginBottom: '1rem' }}>
               <StatusBadge status={selectedStatus} />
             </div>

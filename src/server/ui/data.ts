@@ -241,31 +241,33 @@ export async function listApprovalQueueData(
   const supabase = await requireSupabase();
   const limit = filters.limit ?? 30;
   const offset = parseCursor(filters.cursor);
+  const hasOfferFilters =
+    Boolean(filters.q) ||
+    Boolean(filters.marketplace) ||
+    Boolean(filters.categoryId) ||
+    filters.minScore !== undefined;
+  const offerRelation = hasOfferFilters ? 'offers!inner' : 'offers';
 
   let query = supabase
     .from('approval_queue')
-    .select('id, offer_id, status, priority_score, updated_at, offers(id, marketplace, title, current_price, score, highlights, category_id, captured_at)')
+    .select(`id, offer_id, status, priority_score, updated_at, ${offerRelation}(id, marketplace, title, current_price, score, highlights, category_id, captured_at)`)
     .eq('workspace_id', session.workspace.id);
 
   if (filters.status) query = query.eq('status', filters.status);
+  if (filters.q) query = query.ilike('offers.title', `%${filters.q}%`);
+  if (filters.marketplace) query = query.eq('offers.marketplace', filters.marketplace);
+  if (filters.categoryId) query = query.eq('offers.category_id', filters.categoryId);
+  if (filters.minScore !== undefined) query = query.gte('offers.score', filters.minScore);
 
   if (filters.sort === 'updated_desc') query = query.order('updated_at', { ascending: false });
   else if (filters.sort === 'captured_desc') query = query.order('created_at', { ascending: false });
   else query = query.order('priority_score', { ascending: false }).order('created_at', { ascending: false });
 
-  const { data, error } = await query.limit(Math.max(120, offset + limit + 1));
+  const { data, error } = await query.range(offset, offset + limit);
   if (error) throw new Error(error.message);
 
-  const rows = ((data ?? []) as QueueRow[]).filter((row) => {
-    const offer = singleRelation(row.offers);
-    if (!offer) return false;
-    if (filters.q && !offer.title.toLowerCase().includes(filters.q.toLowerCase())) return false;
-    if (filters.marketplace && offer.marketplace !== filters.marketplace) return false;
-    if (filters.categoryId && offer.category_id !== filters.categoryId) return false;
-    if (filters.minScore !== undefined && offer.score < filters.minScore) return false;
-    return true;
-  });
-  const pageRows = rows.slice(offset, offset + limit);
+  const rows = ((data ?? []) as QueueRow[]).filter((row) => Boolean(singleRelation(row.offers)));
+  const pageRows = rows.slice(0, limit);
 
   return {
     items: pageRows.map((row) => {
@@ -283,8 +285,20 @@ export async function listApprovalQueueData(
         updatedAt: row.updated_at
       };
     }),
-    nextCursor: rows.length > offset + limit ? String(offset + limit) : null
+    nextCursor: rows.length > limit ? String(offset + limit) : null
   };
+}
+
+export async function countPendingApprovals(session: AuthenticatedBackofficeSession): Promise<number> {
+  const supabase = await requireSupabase();
+  const { count, error } = await supabase
+    .from('approval_queue')
+    .select('id', { count: 'exact', head: true })
+    .eq('workspace_id', session.workspace.id)
+    .eq('status', 'pending');
+
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }
 
 export async function getApprovalDetailData(session: AuthenticatedBackofficeSession, queueId: string) {

@@ -4,14 +4,19 @@ import { Field, SelectInput, TextInput } from '@/components/ui/form';
 export function OfferFilters({
   categories,
   tags,
-  showDiscount = true
+  showDiscount = true,
+  hiddenFields = []
 }: {
   categories: Array<{ id: string; name: string }>;
   tags?: Array<{ id: string; name: string }>;
   showDiscount?: boolean;
+  hiddenFields?: Array<{ name: string; value: string }>;
 }) {
   return (
     <form className="filter-bar">
+      {hiddenFields.map((field) => (
+        <input key={field.name} type="hidden" name={field.name} value={field.value} />
+      ))}
       <Field label="Busca">
         <TextInput name="q" placeholder="Produto, cupom ou termo" />
       </Field>

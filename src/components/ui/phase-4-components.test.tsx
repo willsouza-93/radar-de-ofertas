@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { EmptyState } from '@/components/feedback/empty-state';
+import { OfferFilters } from '@/components/offers/offer-filters';
 import { StatusBadge, HighlightBadge } from '@/components/ui/badge';
 import { getScoreLabel, ScoreBadge } from '@/components/ui/score-badge';
 import { ReviewHistory } from '@/components/curation/review-history';
@@ -74,5 +75,19 @@ describe('Phase 4 UI components', () => {
     expect(html).toContain('Cupom validado no app.');
     expect(html).not.toContain('Editar');
     expect(html).not.toContain('Excluir');
+  });
+
+  it('preserves curation status in filter submissions through hidden fields', () => {
+    const html = renderToStaticMarkup(
+      <OfferFilters
+        categories={[]}
+        showDiscount={false}
+        hiddenFields={[{ name: 'status', value: 'approved' }]}
+      />
+    );
+
+    expect(html).toContain('type="hidden"');
+    expect(html).toContain('name="status"');
+    expect(html).toContain('value="approved"');
   });
 });

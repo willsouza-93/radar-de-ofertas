@@ -14,3 +14,16 @@ export function getHumanErrorMessage(error: unknown): string {
 
   return messageByCode[error.message] ?? messageByCode[(error as { code?: string }).code ?? ''] ?? error.message;
 }
+
+export function getActionErrorMessage(code: string | string[] | undefined): string | null {
+  const value = Array.isArray(code) ? code[0] : code;
+  const messages: Record<string, string> = {
+    VERSION_CONFLICT: 'Esta oferta foi atualizada por outra acao. Recarregue antes de continuar.',
+    FORBIDDEN: 'Seu perfil nao tem acesso a esta acao.',
+    NOT_FOUND: 'Este item nao foi encontrado ou nao pertence ao seu workspace.',
+    VALIDATION_ERROR: 'Revise os campos destacados.',
+    ACTION_FAILED: 'Nao foi possivel concluir a acao. Recarregue e tente novamente.'
+  };
+
+  return value ? messages[value] ?? null : null;
+}

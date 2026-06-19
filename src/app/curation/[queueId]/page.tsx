@@ -10,14 +10,23 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/badge';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { getApprovalDetailData } from '@/server/ui/data';
+import { getActionErrorMessage } from '@/server/ui/errors';
 
 export const dynamic = 'force-dynamic';
 
-export default function CurationDetailPage({ params }: { params: Promise<{ queueId: string }> }) {
+export default function CurationDetailPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ queueId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   return (
     <ProtectedShell currentPath="/curation">
       {async ({ session }) => {
         const { queueId } = await params;
+        const query = searchParams ? await searchParams : {};
+        const actionError = getActionErrorMessage(query.actionError);
         const detail = await getApprovalDetailData(session, queueId);
         const isPending = detail.queue.status === 'pending';
 
@@ -29,6 +38,12 @@ export default function CurationDetailPage({ params }: { params: Promise<{ queue
               description="Revise score, contexto e historico antes da decisao."
               action={<Button as={Link} href="/curation" variant="secondary">Voltar para curadoria</Button>}
             />
+            {actionError ? (
+              <section className="card" role="alert" style={{ marginBottom: '1rem' }}>
+                <strong>Acao nao concluida.</strong>
+                <p className="muted" style={{ marginBottom: 0 }}>{actionError}</p>
+              </section>
+            ) : null}
             <div className="grid grid-detail">
               <section className="grid">
                 <article className="card">

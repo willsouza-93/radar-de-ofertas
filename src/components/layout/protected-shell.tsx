@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { AccessLimitedState } from '@/components/feedback/access-limited-state';
 import { AppShell } from '@/components/layout/app-shell';
-import { listApprovalQueueData } from '@/server/ui/data';
+import { countPendingApprovals } from '@/server/ui/data';
 import { getCurrentUserSession, type AuthenticatedBackofficeSession } from '@/server/ui/session';
 
 type AuthenticatedContext = {
@@ -63,6 +63,6 @@ async function getAuthenticatedContext(): Promise<
     };
   }
 
-  const pending = await listApprovalQueueData(session, { status: 'pending', limit: 1 });
-  return { kind: 'authenticated' as const, session, pendingCount: pending.items.length };
+  const pendingCount = await countPendingApprovals(session);
+  return { kind: 'authenticated' as const, session, pendingCount };
 }

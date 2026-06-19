@@ -2,36 +2,24 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { z } from 'zod';
 
 import { createSupabaseServerClient } from '@/server/supabase/server';
+import {
+  approveActionSchema,
+  loginActionSchema,
+  noteActionSchema,
+  rejectActionSchema
+} from '@/server/ui/action-schemas';
 
-const uuidSchema = z
-  .string()
-  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1)
-});
-
-const noteSchema = z.object({
-  queueId: uuidSchema,
-  body: z.string().trim().min(1).max(2000)
-}).strict();
-
-const approveSchema = z.object({
-  queueId: uuidSchema,
-  note: z.string().trim().max(2000).optional()
-}).strict();
-
-const rejectSchema = z.object({
-  queueId: uuidSchema,
-  reason: z.string().trim().min(3).max(2000)
-}).strict();
+type ActionErrorCode =
+  | 'VERSION_CONFLICT'
+  | 'FORBIDDEN'
+  | 'NOT_FOUND'
+  | 'VALIDATION_ERROR'
+  | 'ACTION_FAILED';
 
 export async function signInAction(formData: FormData): Promise<void> {
-  const parsed = loginSchema.safeParse({
+  const parsed = loginActionSchema.safeParse({
     email: formData.get('email'),
     password: formData.get('password')
   });
@@ -54,7 +42,7 @@ export async function signOutAction(): Promise<void> {
 }
 
 export async function addReviewNoteAction(formData: FormData): Promise<void> {
-  const parsed = noteSchema.parse({
+  const parsed = noteActionSchema.parse({
     queueId: formData.get('queueId'),
     body: formData.get('body')
   });
@@ -68,8 +56,8 @@ export async function addReviewNoteAction(formData: FormData): Promise<void> {
     .eq('id', parsed.queueId)
     .maybeSingle();
 
-  if (queueError) throw new Error(queueError.message);
-  if (!queue) throw new Error('NOT_FOUND');
+  if (queueError) redirectWithActionError(parsed.queueId, toActionErrorCode(queueError));
+  if (!queue) redirectWithActionError(parsed.queueId, 'NOT_FOUND');
 
   const { error } = await supabase.from('review_notes').insert({
     workspace_id: queue.workspace_id,
@@ -78,27 +66,30 @@ export async function addReviewNoteAction(formData: FormData): Promise<void> {
     body: parsed.body,
     created_by: userData.user.id
   });
-  if (error) throw new Error(error.message);
+  if (error) redirectWithActionError(parsed.queueId, toActionErrorCode(error));
 
   revalidatePath(`/curation/${parsed.queueId}`);
+  redirect(`/curation/${parsed.queueId}`);
 }
 
 export async function approveOfferAction(formData: FormData): Promise<void> {
-  const parsed = approveSchema.parse({
+  const parsed = approveActionSchema.parse({
     queueId: formData.get('queueId'),
     note: formData.get('note') || undefined
   });
-  await applyDecision(parsed.queueId, 'approved', null, parsed.note || null);
+  const errorCode = await applyDecision(parsed.queueId, 'approved', null, parsed.note || null);
+  if (errorCode) redirectWithActionError(parsed.queueId, errorCode);
   revalidatePath(`/curation/${parsed.queueId}`);
   redirect(`/curation/${parsed.queueId}`);
 }
 
 export async function rejectOfferAction(formData: FormData): Promise<void> {
-  const parsed = rejectSchema.parse({
+  const parsed = rejectActionSchema.parse({
     queueId: formData.get('queueId'),
     reason: formData.get('reason')
   });
-  await applyDecision(parsed.queueId, 'rejected', parsed.reason, null);
+  const errorCode = await applyDecision(parsed.queueId, 'rejected', parsed.reason, null);
+  if (errorCode) redirectWithActionError(parsed.queueId, errorCode);
   revalidatePath(`/curation/${parsed.queueId}`);
   redirect(`/curation/${parsed.queueId}`);
 }
@@ -108,7 +99,7 @@ async function applyDecision(
   decision: 'approved' | 'rejected',
   reason: string | null,
   note: string | null
-): Promise<void> {
+): Promise<ActionErrorCode | null> {
   const supabase = await requireSupabaseForAction();
   const { error } = await supabase.rpc('apply_approval_decision', {
     target_queue_id: queueId,
@@ -117,11 +108,25 @@ async function applyDecision(
     decision_reason: reason,
     note_body: note
   });
-  if (error) throw new Error(error.message);
+  return error ? toActionErrorCode(error) : null;
 }
 
 async function requireSupabaseForAction() {
   const supabase = await createSupabaseServerClient();
   if (!supabase) throw new Error('UNAUTHENTICATED');
   return supabase;
+}
+
+function toActionErrorCode(error: { code?: string; message?: string }): ActionErrorCode {
+  if (error.code === '40001') return 'VERSION_CONFLICT';
+  if (error.code === '42501') return 'FORBIDDEN';
+  if (error.code === 'P0002') return 'NOT_FOUND';
+  if (error.code === '23514' || error.code === '23503' || error.code === '22P02') {
+    return 'VALIDATION_ERROR';
+  }
+  return 'ACTION_FAILED';
+}
+
+function redirectWithActionError(queueId: string, code: ActionErrorCode): never {
+  redirect(`/curation/${queueId}?actionError=${code}`);
 }
