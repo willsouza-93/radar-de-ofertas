@@ -50,13 +50,15 @@ jobs:
             exit 1
           fi
 
-      - name: Prepare release notes prefix
+      - name: Prepare release notes
         shell: bash
         run: |
           set -euo pipefail
 
           tag_name="${GITHUB_REF_NAME}"
+          release_note_file="docs/releases/${tag_name}.md"
           changelog_file=""
+          validation_report=""
 
           if [[ "${tag_name}" =~ ^v0\.([0-9]+)\.[0-9]+$ ]]; then
             phase="${BASH_REMATCH[1]}"
@@ -71,24 +73,42 @@ jobs:
                 break
               fi
             done
+
+            for candidate in \
+              "docs/operations/PHASE_${phase}B_LOCAL_VALIDATION_REPORT.md" \
+              "docs/operations/PHASE_${phase}C_VALIDATION_REPORT.md"
+            do
+              if [[ -f "${candidate}" ]]; then
+                validation_report="${candidate}"
+                break
+              fi
+            done
           fi
 
           if [[ -z "${changelog_file}" && -f "CHANGELOG.md" ]]; then
             changelog_file="CHANGELOG.md"
           fi
 
-          {
-            echo "## Project changelog context"
-            echo
-
-            if [[ -n "${changelog_file}" ]]; then
-              echo "Source: \`${changelog_file}\`"
+          if [[ -f "${release_note_file}" ]]; then
+            cp "${release_note_file}" release-notes.md
+            echo "manual_notes=true" >> "${GITHUB_ENV}"
+          else
+            {
+              echo "## Technical documentation"
               echo
-              sed -n '1,220p' "${changelog_file}"
-            else
-              echo "No project changelog file was found for this tag."
-            fi
-          } > release-notes-prefix.md
+
+              if [[ -n "${changelog_file}" ]]; then
+                echo "- Technical changelog: \`${changelog_file}\`"
+              else
+                echo "- Technical changelog: not found for this tag."
+              fi
+
+              if [[ -n "${validation_report}" ]]; then
+                echo "- Validation report: \`${validation_report}\`"
+              fi
+            } > release-notes.md
+            echo "manual_notes=false" >> "${GITHUB_ENV}"
+          fi
 
       - name: Create GitHub Release
         shell: bash
@@ -106,13 +126,19 @@ jobs:
             latest_flag+=(--latest=false)
           fi
 
-          release_notes="$(cat release-notes-prefix.md)"
+          generate_notes_flag=(--generate-notes)
+          release_notes_arg=(--notes "$(cat release-notes.md)")
+
+          if [[ "${manual_notes}" == "true" ]]; then
+            generate_notes_flag=()
+            release_notes_arg=(--notes-file release-notes.md)
+          fi
 
           gh release create "${tag_name}" \
             --repo "${GITHUB_REPOSITORY}" \
             --verify-tag \
-            --generate-notes \
             --title "${tag_name}" \
-            --notes "${release_notes}" \
+            "${release_notes_arg[@]}" \
+            "${generate_notes_flag[@]}" \
             "${prerelease_flag[@]}" \
             "${latest_flag[@]}"
