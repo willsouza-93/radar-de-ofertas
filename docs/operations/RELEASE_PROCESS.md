@@ -50,23 +50,39 @@ Quando uma tag `v*.*.*` e enviada:
 ^v[0-9]+\.[0-9]+\.[0-9]+$
 ```
 
-3. O job procura um changelog do projeto para complementar as notas:
+3. O job procura primeiro release notes resumidas em:
+
+```text
+docs/releases/<tag>.md
+```
+
+Exemplo:
+
+```text
+docs/releases/v0.3.0.md
+```
+
+4. Se o arquivo existir, ele vira o corpo principal da GitHub Release.
+5. Se o arquivo nao existir, o workflow usa release notes automaticas do GitHub
+   e adiciona apenas links para documentacao tecnica.
+6. O job procura changelog/relatorio tecnico para linkar:
 
 - `docs/architecture/CHANGELOG_FASE_<minor>.md`
 - `docs/operations/CHANGELOG_FASE_<minor>.md`
 - `docs/operations/CHANGELOG_FASE_<minor>C.md`
+- `docs/operations/PHASE_<minor>B_LOCAL_VALIDATION_REPORT.md`
+- `docs/operations/PHASE_<minor>C_VALIDATION_REPORT.md`
 - `CHANGELOG.md`
 
-4. O job cria a GitHub Release usando:
+7. O job cria a GitHub Release usando:
 
 ```bash
 gh release create
 ```
 
-5. As notas automaticas sao geradas pelo GitHub a partir dos commits e PRs
-   disponiveis.
-6. O changelog do projeto, quando encontrado, e adicionado como contexto no
-   inicio das release notes.
+Quando existe `docs/releases/<tag>.md`, o workflow nao usa `--generate-notes`.
+Quando nao existe, usa `--generate-notes` e adiciona os links tecnicos como
+contexto curto.
 
 O workflow usa apenas o `GITHUB_TOKEN` padrao do GitHub Actions, por meio de:
 
@@ -76,6 +92,66 @@ permissions:
 ```
 
 Nenhum secret adicional e necessario.
+
+## Release notes resumidas
+
+Para evitar GitHub Releases longas demais, crie um arquivo dedicado antes de
+criar a tag:
+
+```bash
+mkdir -p docs/releases
+touch docs/releases/v0.3.0.md
+```
+
+Formato recomendado:
+
+```markdown
+# Radar de Ofertas v0.3.0
+
+## ✨ Novidades
+- Resumo das principais entregas da versao.
+
+## 🔒 Segurança
+- Mudancas relevantes de RLS, permissoes, auditoria ou protecao de fluxo.
+
+## 🧪 Qualidade
+- Testes, validacoes e checks relevantes.
+
+## 🚫 Fora de escopo
+- O que explicitamente nao entrou nesta versao.
+
+## 📚 Documentação técnica
+- Links para changelog e relatorios tecnicos relevantes.
+```
+
+### Changelog tecnico vs release notes
+
+Use changelog tecnico para:
+
+- detalhes de migrations;
+- nomes de tabelas, policies, funcoes e constraints;
+- evidencias completas de testes;
+- riscos operacionais;
+- rollback e validacao interna.
+
+Use release notes para:
+
+- explicar valor entregue;
+- resumir seguranca e qualidade;
+- orientar leitores que nao precisam do detalhe completo;
+- linkar a documentacao tecnica.
+
+### Quando criar release notes manuais
+
+Crie `docs/releases/<tag>.md` quando:
+
+- a versao representa uma fase importante;
+- o changelog tecnico e longo;
+- a release sera lida por stakeholders de produto;
+- ha decisoes de seguranca que precisam de resumo claro.
+
+Para patches pequenos e tecnicos, pode deixar o arquivo ausente. Nesse caso, o
+workflow usa as notas automaticas do GitHub e adiciona links tecnicos.
 
 ## Como corrigir uma tag criada por engano
 
@@ -164,9 +240,9 @@ Depois valide no GitHub:
 2. A GitHub Release foi criada.
 3. A release esta marcada como prerelease para `v0.x.x`.
 4. As notas automaticas foram geradas.
-5. O changelog do projeto apareceu como contexto quando havia arquivo
-   correspondente.
+5. Se `docs/releases/<tag>.md` existia, ele foi usado como corpo principal.
+6. Se `docs/releases/<tag>.md` nao existia, os links tecnicos apareceram sem
+   colar o changelog inteiro.
 
 Se o teste foi feito com uma tag incorreta, siga o procedimento de correcao de
 tag descrito acima.
-
