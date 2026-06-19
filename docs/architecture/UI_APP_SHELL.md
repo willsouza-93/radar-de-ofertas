@@ -113,10 +113,13 @@ Regras:
 ## Guardas de rota
 
 - `(auth)/login`: publico, mas redireciona Admin/Editor autenticado para
-  dashboard.
+  `/dashboard`.
+- `(app)/page.tsx`: redirect server-side para `/dashboard`.
 - `(app)/*`: exige usuario autenticado com membership ativa Admin ou Editor.
 - Usuario sem membership, suspenso ou de outro workspace recebe estado de
   acesso limitado sem dados internos.
+- Usuario com mais de uma membership ativa recebe estado controlado informando
+  que selecao multi-workspace ainda nao faz parte do MVP.
 
 ## Estados globais do shell
 
@@ -168,6 +171,7 @@ src/app/
   (auth)/login/page.tsx
   (app)/layout.tsx
   (app)/page.tsx
+  (app)/dashboard/page.tsx
   (app)/offers/page.tsx
   (app)/offers/[offerId]/page.tsx
   (app)/curation/page.tsx

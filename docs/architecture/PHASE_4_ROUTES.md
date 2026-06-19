@@ -9,6 +9,23 @@ Status: mapa de rotas para Fase 4B.
 - Client Components apenas para interacao local, filtros, modais e acoes.
 - Workspace nunca vem da URL nem do body.
 - Query params representam filtros, ordenacao, pagina e tabs.
+- Query params chegam como strings e devem ser parseados/coercidos server-side
+  antes de chamar os services.
+
+## Rota oficial do Dashboard
+
+`/dashboard` e a rota oficial do Dashboard da Fase 4B.
+
+Motivo:
+
+- a decisao operacional aprovada em
+  `docs/decisions/PHASE_1_READINESS_CHECKLIST.md` define o redirect
+  pos-autenticacao como `<base-url>/dashboard`;
+- fluxos de convite, confirmacao ou callback Auth podem direcionar usuarios
+  para essa rota;
+- manter a rota acessivel evita que login bem-sucedido termine em 404.
+
+`/` deve existir apenas como alias/redirect server-side para `/dashboard`.
 
 ## Rotas publicas
 
@@ -20,7 +37,7 @@ Permissao: anon e usuarios sem sessao.
 
 Redirecionamentos:
 
-- usuario autenticado com membership ativa -> `/`
+- usuario autenticado com membership ativa -> `/dashboard`
 - usuario autenticado sem membership ativa -> estado de acesso limitado apos
   validacao no shell
 
@@ -35,6 +52,18 @@ Conteudo:
 ## Rotas autenticadas
 
 ### `/`
+
+Nome: Redirect raiz.
+
+Objetivo: manter a raiz do app segura e previsivel.
+
+Comportamento:
+
+- usuario autenticado com membership ativa -> redirect `/dashboard`;
+- usuario anonimo -> redirect `/login`;
+- usuario sem membership ativa -> `AccessLimitedState` apos validacao do shell.
+
+### `/dashboard`
 
 Nome: Dashboard.
 
@@ -69,6 +98,19 @@ Query params:
 - `to`
 - `sort`
 - `cursor`
+- `limit`
+
+Parsing obrigatorio antes do service:
+
+- `minScore`: string -> inteiro `0..100`.
+- `minDiscount`: string -> numero `0..100`.
+- `limit`: string -> inteiro `1..100`, usando default do service quando
+  ausente.
+- `from`/`to`: string -> ISO datetime valido ou erro de validacao.
+- `categoryId`/`tagId`: UUID valido.
+- strings vazias viram `undefined`.
+- valores invalidos geram erro controlado de filtro e nao devem ser repassados
+  diretamente ao service.
 
 Dados:
 
@@ -118,6 +160,19 @@ Query params:
 - `categoryId`
 - `sort`
 - `cursor`
+- `limit`
+
+Parsing obrigatorio antes do service:
+
+- `minScore`: string -> inteiro `0..100`.
+- `limit`: string -> inteiro `1..100`, usando default do service quando
+  ausente.
+- `categoryId`: UUID valido.
+- `status`, `marketplace` e `sort` devem ser validados contra os enums
+  permitidos.
+- strings vazias viram `undefined`.
+- valores invalidos geram erro controlado de filtro e nao devem ser repassados
+  diretamente ao service.
 
 Dados:
 

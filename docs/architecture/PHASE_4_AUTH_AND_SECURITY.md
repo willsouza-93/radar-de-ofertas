@@ -44,7 +44,23 @@ Recomendado:
 2. Se nao houver usuario, redirecionar para `/login`.
 3. Resolver membership ativa.
 4. Se membership ausente/suspensa, renderizar `AccessLimitedState`.
-5. Expor papel e workspace ao shell como dados serializados minimos.
+5. Se houver mais de uma membership ativa, renderizar estado controlado de
+   multi-workspace nao suportado.
+6. Expor papel e workspace ao shell como dados serializados minimos.
+
+Mensagem para multi-workspace:
+
+```text
+Sua conta esta vinculada a mais de um workspace. A selecao de workspace ainda
+nao faz parte do MVP.
+```
+
+Comportamento:
+
+- bloquear carregamento de dados internos;
+- nao escolher workspace automaticamente;
+- oferecer "Sair" e orientacao para falar com o administrador;
+- registrar erro server-side sem expor detalhes de outros workspaces.
 
 ### Server Actions
 
@@ -67,6 +83,8 @@ Testes obrigatorios:
   schema estrito ou ignorado pelo adapter server-side.
 - Admin de outro workspace recebe not found/empty.
 - Usuario sem membership recebe forbidden.
+- Usuario com multiplos workspaces recebe
+  `MULTIPLE_WORKSPACES_NOT_SUPPORTED` mapeado para estado controlado.
 
 ## Protecao de approval/reject
 
@@ -145,6 +163,7 @@ restritiva ou usar `next/image` com dominios revisados.
 - [ ] Sem `workspaceId` em forms/URLs/actions.
 - [ ] Rotas internas exigem sessao.
 - [ ] Membership ativa verificada no servidor.
+- [ ] Multi-workspace mapeado para estado controlado.
 - [ ] Admin/Editor testados.
 - [ ] Suspenso bloqueado.
 - [ ] Public Visitor/anon bloqueado.

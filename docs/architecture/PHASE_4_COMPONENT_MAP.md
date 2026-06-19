@@ -27,7 +27,7 @@ feedback/
 | Rota | Componentes principais |
 | --- | --- |
 | `/login` | LoginForm, AuthCard, FormError |
-| `/` | ActionSummary, PendingCurationList, TopOffersList, DashboardMetricInline |
+| `/dashboard` | ActionSummary, PendingCurationList, TopOffersList, DashboardMetricInline |
 | `/offers` | OfferFilters, OfferTable, OfferCard, Pagination |
 | `/offers/[offerId]` | OfferDetailHero, ScoreBreakdown, HighlightBadge, PriceHistoryPanel |
 | `/curation` | ApprovalQueueTabs, ApprovalQueueList, ApprovalStatusBadge |
@@ -128,6 +128,8 @@ Filtros:
 Regras:
 
 - filtros persistem na URL.
+- opcoes de categoria/tag vem de `listOfferFilterOptions`.
+- valores da URL sao parseados no servidor antes de chamar services.
 - mobile abre drawer.
 - "Limpar filtros" visivel quando houver filtro ativo.
 

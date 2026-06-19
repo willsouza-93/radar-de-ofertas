@@ -31,10 +31,14 @@ Cobrir:
 - `workspaceId` nao aceito no payload.
 - usuario sem sessao retorna `UNAUTHENTICATED`/redirect.
 - usuario suspenso retorna acesso limitado/forbidden.
+- usuario com multiplos workspaces recebe estado controlado sem dados internos.
 - Admin e Editor conseguem listar fila e detalhe.
 - `approveOffer` envia `expectedStatus: pending`.
 - `rejectOffer` envia `expectedStatus: pending`.
 - `addReviewNote` bloqueia UI quando status terminal.
+- URL filters convertem `minScore`, `minDiscount`, `limit` e datas antes dos
+  services.
+- `listOfferFilterOptions` popula categorias/tags do workspace ativo.
 
 ## E2E
 
@@ -120,17 +124,31 @@ Snapshots visuais recomendados:
 ## Validacoes obrigatorias antes do PR da Fase 4B
 
 ```bash
+npm run typecheck
+npm test
+git diff --check
+```
+
+Observacao: o repositorio atual define apenas `typecheck` e `test` no
+`package.json`. `lint` so deve virar gate obrigatorio depois que a Fase 4B
+adicionar um script executavel.
+
+Em Windows PowerShell local, quando `npm.ps1` estiver bloqueado pela execution
+policy, usar a variante equivalente:
+
+```powershell
 npm.cmd run typecheck
 npm.cmd test
-npm.cmd run lint
 git diff --check
 ```
 
 Se Playwright estiver configurado:
 
 ```bash
-npm.cmd run test:e2e
+npm run test:e2e
 ```
+
+`test:e2e` so deve ser exigido apos a Fase 4B criar o script correspondente.
 
 ## Criterio de aceite
 

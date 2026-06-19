@@ -40,7 +40,8 @@ Status: guia para implementacao futura da UI. Nao executar na Fase 4A.
 - Criar arquivos de UI.
 - Criar componentes.
 - Criar testes.
-- Rodar typecheck/test/lint.
+- Rodar typecheck/test.
+- Rodar lint apenas se a Fase 4B criar script executavel no `package.json`.
 - Abrir PR.
 
 ## O que nao deve executar automaticamente
@@ -87,6 +88,10 @@ Como a Fase 4B nao deve alterar banco:
 - [ ] Nenhuma env var real.
 - [ ] Nenhum `workspaceId` em forms/actions client-side.
 - [ ] Estados de curadoria limitados a `pending`, `approved`, `rejected`.
+- [ ] Dashboard oficial em `/dashboard`; `/` redireciona para `/dashboard`.
+- [ ] Filtros da URL parseados server-side antes dos services.
+- [ ] Categorias/tags carregadas via adapter server-side, sem hardcode.
+- [ ] `MULTIPLE_WORKSPACES_NOT_SUPPORTED` mapeado para estado controlado.
 - [ ] Public Visitor sem backoffice.
 - [ ] Admin/Editor cobertos.
 - [ ] Loading/empty/error cobertos.

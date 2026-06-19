@@ -36,6 +36,47 @@ Erros:
 - multiplos workspaces -> erro controlado, pois selecao multi-workspace esta
   fora do MVP
 
+Mensagem para multiplos workspaces:
+
+```text
+Sua conta esta vinculada a mais de um workspace. A selecao de workspace ainda
+nao faz parte do MVP. Peca ao administrador para manter apenas uma membership
+ativa enquanto a selecao nao estiver disponivel.
+```
+
+Comportamento esperado:
+
+- nao carregar dados internos;
+- manter o shell em estado bloqueado;
+- oferecer "Sair" e contato com administrador;
+- nao escolher workspace automaticamente.
+
+## Parsing de URL filters
+
+Rotas que recebem filtros por URL devem converter `searchParams` para os tipos
+esperados pelos schemas antes de chamar qualquer service.
+
+Regras:
+
+- `minScore`: string -> inteiro `0..100`.
+- `minDiscount`: string -> numero `0..100`.
+- `limit`: string -> inteiro `1..100`.
+- `cursor`: string nao vazia.
+- `from` e `to`: string -> ISO datetime valido.
+- `categoryId` e `tagId`: UUID valido.
+- strings vazias viram `undefined`.
+- valores invalidos retornam erro de filtro no server component/route, sem
+  chamar `listOffers` ou `listApprovalQueue`.
+- arrays vindos de query params repetidos devem usar o primeiro valor ou gerar
+  validacao explicita; nao passar arrays para os services atuais.
+
+Exemplo conceitual:
+
+```ts
+const filters = parseOfferSearchParams(searchParams);
+await listOffers(filters, context);
+```
+
 ## Offers
 
 ### `listOffers`
@@ -65,6 +106,9 @@ Request UI:
 }
 ```
 
+Este request representa o objeto ja parseado/coercido no servidor, nao os valores
+brutos de `searchParams`.
+
 Nao permitido:
 
 - `workspaceId`
@@ -83,6 +127,48 @@ Resposta usada:
 - highlights
 - capturedAt
 - nextCursor
+
+### `listOfferFilterOptions`
+
+Tipo: query server-side/adapter de UI da Fase 4B.
+
+Objetivo: alimentar selects de categoria e tag sem hardcode e sem bypass de
+workspace.
+
+Permissao: Admin ou Editor ativo.
+
+Fonte:
+
+- `categories` ativas do workspace ativo;
+- `tags` ativas do workspace ativo.
+
+Implementacao esperada:
+
+- adapter server-only usando Supabase com RLS ou repository dedicado;
+- workspace derivado da membership ativa;
+- sem `workspaceId` vindo do cliente;
+- sem permitir mutacao de categorias/tags pela UI da Fase 4B.
+
+Request:
+
+```ts
+{}
+```
+
+Response:
+
+```ts
+{
+  categories: Array<{ id: string; name: string; color: string }>;
+  tags: Array<{ id: string; name: string; color: string | null }>;
+}
+```
+
+Erros:
+
+- `UNAUTHENTICATED`
+- `FORBIDDEN`
+- `MULTIPLE_WORKSPACES_NOT_SUPPORTED`
 
 ### `getOfferDetail`
 
@@ -127,6 +213,9 @@ Request:
   sort?: "priority_desc" | "updated_desc" | "captured_desc";
 }
 ```
+
+Este request representa o objeto ja parseado/coercido no servidor, nao os valores
+brutos de `searchParams`.
 
 Resposta usada:
 
@@ -274,6 +363,7 @@ Resposta:
 | `VALIDATION_ERROR` | "Revise os campos destacados." |
 | `VERSION_CONFLICT` | "Esta oferta foi atualizada por outra acao. Recarregue antes de continuar." |
 | `INVALID_TRANSITION` | "Esta oferta ja foi decidida e nao aceita novas alteracoes." |
+| `MULTIPLE_WORKSPACES_NOT_SUPPORTED` | "Sua conta esta vinculada a mais de um workspace. A selecao de workspace ainda nao faz parte do MVP." |
 
 ## Logs estruturados
 
