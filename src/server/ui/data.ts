@@ -116,8 +116,12 @@ export async function listOfferFilterOptions(session: AuthenticatedBackofficeSes
   if (tagsResult.error) throw new Error(tagsResult.error.message);
 
   return {
-    categories: (categoriesResult.data ?? []) as Array<{ id: string; name: string; color: string }>,
-    tags: (tagsResult.data ?? []) as Array<{ id: string; name: string; color: string | null }>
+    categories: uniqueFilterOptionsByName(
+      (categoriesResult.data ?? []) as Array<{ id: string; name: string; color: string }>
+    ),
+    tags: uniqueFilterOptionsByName(
+      (tagsResult.data ?? []) as Array<{ id: string; name: string; color: string | null }>
+    )
   };
 }
 
@@ -128,6 +132,9 @@ export async function listOffersData(
   const supabase = await requireSupabase();
   const limit = filters.limit ?? 30;
   const offset = parseCursor(filters.cursor);
+  const matchingCategoryIds = filters.categoryId
+    ? await getCategoryIdsBySameName(supabase, session.workspace.id, filters.categoryId)
+    : null;
   const matchingOfferIds = filters.tagId
     ? await getOfferIdsByTag(supabase, session.workspace.id, filters.tagId)
     : null;
@@ -139,7 +146,7 @@ export async function listOffersData(
 
   if (filters.q) query = query.ilike('title', `%${filters.q}%`);
   if (filters.marketplace) query = query.eq('marketplace', filters.marketplace);
-  if (filters.categoryId) query = query.eq('category_id', filters.categoryId);
+  if (matchingCategoryIds) query = matchingCategoryIds.length > 0 ? query.in('category_id', matchingCategoryIds) : query.eq('category_id', '00000000-0000-0000-0000-000000000000');
   if (filters.minScore !== undefined) query = query.gte('score', filters.minScore);
   if (filters.minDiscount !== undefined) query = query.gte('discount_percent', filters.minDiscount);
   if (filters.from) query = query.gte('captured_at', filters.from);
@@ -241,6 +248,9 @@ export async function listApprovalQueueData(
   const supabase = await requireSupabase();
   const limit = filters.limit ?? 30;
   const offset = parseCursor(filters.cursor);
+  const matchingCategoryIds = filters.categoryId
+    ? await getCategoryIdsBySameName(supabase, session.workspace.id, filters.categoryId)
+    : null;
   const hasOfferFilters =
     Boolean(filters.q) ||
     Boolean(filters.marketplace) ||
@@ -256,7 +266,7 @@ export async function listApprovalQueueData(
   if (filters.status) query = query.eq('status', filters.status);
   if (filters.q) query = query.ilike('offers.title', `%${filters.q}%`);
   if (filters.marketplace) query = query.eq('offers.marketplace', filters.marketplace);
-  if (filters.categoryId) query = query.eq('offers.category_id', filters.categoryId);
+  if (matchingCategoryIds) query = matchingCategoryIds.length > 0 ? query.in('offers.category_id', matchingCategoryIds) : query.eq('offers.category_id', '00000000-0000-0000-0000-000000000000');
   if (filters.minScore !== undefined) query = query.gte('offers.score', filters.minScore);
 
   if (filters.sort === 'updated_desc') query = query.order('updated_at', { ascending: false });
@@ -401,14 +411,69 @@ async function requireSupabase(): Promise<SupabaseQueryClient> {
 }
 
 async function getOfferIdsByTag(supabase: SupabaseQueryClient, workspaceId: string, tagId: string) {
+  const matchingTagIds = await getTagIdsBySameName(supabase, workspaceId, tagId);
+  if (matchingTagIds.length === 0) return [];
+
   const { data, error } = await supabase
     .from('offer_tags')
     .select('offer_id')
     .eq('workspace_id', workspaceId)
-    .eq('tag_id', tagId);
+    .in('tag_id', matchingTagIds);
 
   if (error) throw new Error(error.message);
   return (data ?? []).map((row: { offer_id: string }) => row.offer_id);
+}
+
+async function getCategoryIdsBySameName(
+  supabase: SupabaseQueryClient,
+  workspaceId: string,
+  categoryId: string
+): Promise<string[]> {
+  const { data: selectedCategory, error: selectedError } = await supabase
+    .from('categories')
+    .select('name')
+    .eq('workspace_id', workspaceId)
+    .eq('id', categoryId)
+    .maybeSingle();
+
+  if (selectedError) throw new Error(selectedError.message);
+  if (!selectedCategory) return [];
+
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id')
+    .eq('workspace_id', workspaceId)
+    .eq('is_active', true)
+    .eq('name', selectedCategory.name);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row: { id: string }) => row.id);
+}
+
+async function getTagIdsBySameName(
+  supabase: SupabaseQueryClient,
+  workspaceId: string,
+  tagId: string
+): Promise<string[]> {
+  const { data: selectedTag, error: selectedError } = await supabase
+    .from('tags')
+    .select('name')
+    .eq('workspace_id', workspaceId)
+    .eq('id', tagId)
+    .maybeSingle();
+
+  if (selectedError) throw new Error(selectedError.message);
+  if (!selectedTag) return [];
+
+  const { data, error } = await supabase
+    .from('tags')
+    .select('id')
+    .eq('workspace_id', workspaceId)
+    .eq('is_active', true)
+    .eq('name', selectedTag.name);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row: { id: string }) => row.id);
 }
 
 function mapOfferListItem(row: OfferRow): OfferListItem {
@@ -506,6 +571,20 @@ function parseCursor(cursor: string | undefined): number {
   if (!cursor) return 0;
   const value = Number(cursor);
   return Number.isInteger(value) && value >= 0 ? value : 0;
+}
+
+function uniqueFilterOptionsByName<TOption extends { id: string; name: string }>(options: TOption[]): TOption[] {
+  const seen = new Set<string>();
+  const uniqueOptions: TOption[] = [];
+
+  for (const option of options) {
+    const key = option.name.trim().toLocaleLowerCase('pt-BR');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniqueOptions.push(option);
+  }
+
+  return uniqueOptions;
 }
 
 function toNumber(value: number | string): number {
