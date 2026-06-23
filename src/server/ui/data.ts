@@ -48,6 +48,7 @@ type OfferRow = {
 
 type CategoryRow = { id: string; name: string; slug?: string; color: string; is_active?: boolean };
 type TagRow = { id: string; name: string; slug?: string; color: string | null; is_active?: boolean };
+type FilterOptionRow = { id: string; name: string; slug?: string | null; color: string | null };
 
 type QueueRow = {
   id: string;
@@ -100,13 +101,13 @@ export async function listOfferFilterOptions(session: AuthenticatedBackofficeSes
   const [categoriesResult, tagsResult] = await Promise.all([
     supabase
       .from('categories')
-      .select('id, name, color')
+      .select('id, name, slug, color')
       .eq('workspace_id', session.workspace.id)
       .eq('is_active', true)
       .order('name', { ascending: true }),
     supabase
       .from('tags')
-      .select('id, name, color')
+      .select('id, name, slug, color')
       .eq('workspace_id', session.workspace.id)
       .eq('is_active', true)
       .order('name', { ascending: true })
@@ -116,12 +117,8 @@ export async function listOfferFilterOptions(session: AuthenticatedBackofficeSes
   if (tagsResult.error) throw new Error(tagsResult.error.message);
 
   return {
-    categories: uniqueFilterOptionsByName(
-      (categoriesResult.data ?? []) as Array<{ id: string; name: string; color: string }>
-    ),
-    tags: uniqueFilterOptionsByName(
-      (tagsResult.data ?? []) as Array<{ id: string; name: string; color: string | null }>
-    )
+    categories: buildFilterOptionLabels((categoriesResult.data ?? []) as FilterOptionRow[]),
+    tags: buildFilterOptionLabels((tagsResult.data ?? []) as FilterOptionRow[])
   };
 }
 
@@ -132,9 +129,6 @@ export async function listOffersData(
   const supabase = await requireSupabase();
   const limit = filters.limit ?? 30;
   const offset = parseCursor(filters.cursor);
-  const matchingCategoryIds = filters.categoryId
-    ? await getCategoryIdsBySameName(supabase, session.workspace.id, filters.categoryId)
-    : null;
   const matchingOfferIds = filters.tagId
     ? await getOfferIdsByTag(supabase, session.workspace.id, filters.tagId)
     : null;
@@ -146,7 +140,7 @@ export async function listOffersData(
 
   if (filters.q) query = query.ilike('title', `%${filters.q}%`);
   if (filters.marketplace) query = query.eq('marketplace', filters.marketplace);
-  if (matchingCategoryIds) query = matchingCategoryIds.length > 0 ? query.in('category_id', matchingCategoryIds) : query.eq('category_id', '00000000-0000-0000-0000-000000000000');
+  if (filters.categoryId) query = query.eq('category_id', filters.categoryId);
   if (filters.minScore !== undefined) query = query.gte('score', filters.minScore);
   if (filters.minDiscount !== undefined) query = query.gte('discount_percent', filters.minDiscount);
   if (filters.from) query = query.gte('captured_at', filters.from);
@@ -248,9 +242,6 @@ export async function listApprovalQueueData(
   const supabase = await requireSupabase();
   const limit = filters.limit ?? 30;
   const offset = parseCursor(filters.cursor);
-  const matchingCategoryIds = filters.categoryId
-    ? await getCategoryIdsBySameName(supabase, session.workspace.id, filters.categoryId)
-    : null;
   const hasOfferFilters =
     Boolean(filters.q) ||
     Boolean(filters.marketplace) ||
@@ -266,7 +257,7 @@ export async function listApprovalQueueData(
   if (filters.status) query = query.eq('status', filters.status);
   if (filters.q) query = query.ilike('offers.title', `%${filters.q}%`);
   if (filters.marketplace) query = query.eq('offers.marketplace', filters.marketplace);
-  if (matchingCategoryIds) query = matchingCategoryIds.length > 0 ? query.in('offers.category_id', matchingCategoryIds) : query.eq('offers.category_id', '00000000-0000-0000-0000-000000000000');
+  if (filters.categoryId) query = query.eq('offers.category_id', filters.categoryId);
   if (filters.minScore !== undefined) query = query.gte('offers.score', filters.minScore);
 
   if (filters.sort === 'updated_desc') query = query.order('updated_at', { ascending: false });
@@ -411,69 +402,14 @@ async function requireSupabase(): Promise<SupabaseQueryClient> {
 }
 
 async function getOfferIdsByTag(supabase: SupabaseQueryClient, workspaceId: string, tagId: string) {
-  const matchingTagIds = await getTagIdsBySameName(supabase, workspaceId, tagId);
-  if (matchingTagIds.length === 0) return [];
-
   const { data, error } = await supabase
     .from('offer_tags')
     .select('offer_id')
     .eq('workspace_id', workspaceId)
-    .in('tag_id', matchingTagIds);
+    .eq('tag_id', tagId);
 
   if (error) throw new Error(error.message);
   return (data ?? []).map((row: { offer_id: string }) => row.offer_id);
-}
-
-async function getCategoryIdsBySameName(
-  supabase: SupabaseQueryClient,
-  workspaceId: string,
-  categoryId: string
-): Promise<string[]> {
-  const { data: selectedCategory, error: selectedError } = await supabase
-    .from('categories')
-    .select('name')
-    .eq('workspace_id', workspaceId)
-    .eq('id', categoryId)
-    .maybeSingle();
-
-  if (selectedError) throw new Error(selectedError.message);
-  if (!selectedCategory) return [];
-
-  const { data, error } = await supabase
-    .from('categories')
-    .select('id')
-    .eq('workspace_id', workspaceId)
-    .eq('is_active', true)
-    .eq('name', selectedCategory.name);
-
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((row: { id: string }) => row.id);
-}
-
-async function getTagIdsBySameName(
-  supabase: SupabaseQueryClient,
-  workspaceId: string,
-  tagId: string
-): Promise<string[]> {
-  const { data: selectedTag, error: selectedError } = await supabase
-    .from('tags')
-    .select('name')
-    .eq('workspace_id', workspaceId)
-    .eq('id', tagId)
-    .maybeSingle();
-
-  if (selectedError) throw new Error(selectedError.message);
-  if (!selectedTag) return [];
-
-  const { data, error } = await supabase
-    .from('tags')
-    .select('id')
-    .eq('workspace_id', workspaceId)
-    .eq('is_active', true)
-    .eq('name', selectedTag.name);
-
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((row: { id: string }) => row.id);
 }
 
 function mapOfferListItem(row: OfferRow): OfferListItem {
@@ -573,18 +509,28 @@ function parseCursor(cursor: string | undefined): number {
   return Number.isInteger(value) && value >= 0 ? value : 0;
 }
 
-function uniqueFilterOptionsByName<TOption extends { id: string; name: string }>(options: TOption[]): TOption[] {
-  const seen = new Set<string>();
-  const uniqueOptions: TOption[] = [];
+function buildFilterOptionLabels<TOption extends FilterOptionRow>(
+  options: TOption[]
+): Array<TOption & { label: string }> {
+  const nameCounts = options.reduce((counts, option) => {
+    const key = normalizeOptionName(option.name);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    return counts;
+  }, new Map<string, number>());
 
-  for (const option of options) {
-    const key = option.name.trim().toLocaleLowerCase('pt-BR');
-    if (seen.has(key)) continue;
-    seen.add(key);
-    uniqueOptions.push(option);
-  }
+  return options.map((option) => {
+    const hasDuplicateName = (nameCounts.get(normalizeOptionName(option.name)) ?? 0) > 1;
+    const suffix = option.slug || option.id.slice(0, 8);
 
-  return uniqueOptions;
+    return {
+      ...option,
+      label: hasDuplicateName ? `${option.name} (${suffix})` : option.name
+    };
+  });
+}
+
+function normalizeOptionName(name: string): string {
+  return name.trim().toLocaleLowerCase('pt-BR');
 }
 
 function toNumber(value: number | string): number {

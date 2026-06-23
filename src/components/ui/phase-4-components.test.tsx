@@ -163,6 +163,26 @@ describe('Phase 4 UI components', () => {
     expect(html).not.toContain('value="20"');
   });
 
+  it('renders disambiguated filter labels for options with repeated names', () => {
+    const html = renderToStaticMarkup(
+      <OfferFilters
+        categories={[
+          { id: '20000000-0000-0000-0000-000000000001', name: 'Tecnologia', label: 'Tecnologia (tecnologia)' },
+          { id: '20000000-0000-0000-0000-000000000002', name: 'Tecnologia', label: 'Tecnologia (tecnologia-demo)' }
+        ]}
+        tags={[
+          { id: '30000000-0000-0000-0000-000000000001', name: 'Frete gratis', label: 'Frete gratis (frete-gratis)' },
+          { id: '30000000-0000-0000-0000-000000000002', name: 'Frete gratis', label: 'Frete gratis (frete-gratis-demo)' }
+        ]}
+      />
+    );
+
+    expect(html).toContain('Tecnologia (tecnologia)');
+    expect(html).toContain('Tecnologia (tecnologia-demo)');
+    expect(html).toContain('Frete gratis (frete-gratis)');
+    expect(html).toContain('Frete gratis (frete-gratis-demo)');
+  });
+
   it('builds cumulative filter navigation targets and drops stale cursors', () => {
     const href = buildFilterHref({
       pathname: '/offers',

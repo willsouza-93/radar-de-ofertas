@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -28,8 +28,8 @@ export function OfferFilters({
   showDiscount = true,
   hiddenFields = []
 }: {
-  categories: Array<{ id: string; name: string }>;
-  tags?: Array<{ id: string; name: string }>;
+  categories: Array<{ id: string; name: string; label?: string }>;
+  tags?: Array<{ id: string; name: string; label?: string }>;
   showDiscount?: boolean;
   hiddenFields?: Array<{ name: string; value: string }>;
 }) {
@@ -38,6 +38,7 @@ export function OfferFilters({
   const searchParams = useSearchParams();
   const search = searchParams.toString();
   const [values, setValues] = useState<FilterFormValues>(() => valuesFromSearchParams(searchParams));
+  const searchDebounceRef = useRef<number | null>(null);
 
   useEffect(() => {
     setValues(valuesFromSearchParams(searchParams));
@@ -46,7 +47,9 @@ export function OfferFilters({
   useEffect(() => {
     if (values.q === (searchParams.get('q') ?? '')) return;
 
-    const timeoutId = window.setTimeout(() => {
+    if (searchDebounceRef.current) window.clearTimeout(searchDebounceRef.current);
+
+    searchDebounceRef.current = window.setTimeout(() => {
       const href = buildSearchHref({
         pathname,
         currentSearch: search,
@@ -54,13 +57,24 @@ export function OfferFilters({
       });
 
       if (href) router.replace(href, { scroll: false });
+      searchDebounceRef.current = null;
     }, textSearchDebounceMs);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      if (searchDebounceRef.current) {
+        window.clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = null;
+      }
+    };
   }, [pathname, router, search, searchParams, values.q]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (searchDebounceRef.current) {
+      window.clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
 
     const submittedValues = {
       ...values,
@@ -105,14 +119,14 @@ export function OfferFilters({
       <Field label="Categoria">
         <SelectInput name="categoryId" value={values.categoryId} onChange={updateField('categoryId')}>
           <option value="">Todas</option>
-          {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+          {categories.map((category) => <option key={category.id} value={category.id}>{category.label ?? category.name}</option>)}
         </SelectInput>
       </Field>
       {tags ? (
         <Field label="Tag">
           <SelectInput name="tagId" value={values.tagId} onChange={updateField('tagId')}>
             <option value="">Todas</option>
-            {tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}
+            {tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.label ?? tag.name}</option>)}
           </SelectInput>
         </Field>
       ) : null}
