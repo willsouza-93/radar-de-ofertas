@@ -5,37 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Field, SelectInput, TextInput } from '@/components/ui/form';
-
-const filterFields = ['q', 'marketplace', 'categoryId', 'tagId', 'minScore', 'minDiscount'] as const;
-
-export function buildFilterHref({
-  pathname,
-  currentSearch,
-  values,
-  hiddenFieldNames = []
-}: {
-  pathname: string;
-  currentSearch: string;
-  values: Record<string, string>;
-  hiddenFieldNames?: string[];
-}): string {
-  const nextParams = new URLSearchParams(currentSearch);
-  const fields = new Set<string>(filterFields);
-
-  hiddenFieldNames.forEach((field) => fields.add(field));
-
-  fields.forEach((field) => {
-    const normalizedValue = values[field]?.trim() ?? '';
-
-    if (normalizedValue) nextParams.set(field, normalizedValue);
-    else nextParams.delete(field);
-  });
-
-  nextParams.delete('cursor');
-
-  const query = nextParams.toString();
-  return query ? `${pathname}?${query}` : pathname;
-}
+import { buildFilterHref, formFilterFields } from '@/components/offers/filter-url';
 
 export function OfferFilters({
   categories,
@@ -57,7 +27,7 @@ export function OfferFilters({
 
     const formData = new FormData(event.currentTarget);
     const values = Object.fromEntries(
-      [...filterFields, ...hiddenFields.map((field) => field.name)].map((field) => [
+      [...formFilterFields, ...hiddenFields.map((field) => field.name)].map((field) => [
         field,
         String(formData.get(field) ?? '')
       ])

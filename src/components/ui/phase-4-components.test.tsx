@@ -2,7 +2,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EmptyState } from '@/components/feedback/empty-state';
-import { buildFilterHref, OfferFilters } from '@/components/offers/offer-filters';
+import {
+  buildClearFiltersHref,
+  buildCurationStatusHref,
+  buildFilterHref,
+  hasSecondaryFilters
+} from '@/components/offers/filter-url';
+import { OfferFilters } from '@/components/offers/offer-filters';
 import { StatusBadge, HighlightBadge } from '@/components/ui/badge';
 import { getScoreLabel, ScoreBadge } from '@/components/ui/score-badge';
 import { ReviewHistory } from '@/components/curation/review-history';
@@ -151,5 +157,69 @@ describe('Phase 4 UI components', () => {
     });
 
     expect(href).toBe('/offers?marketplace=mercado_livre&sort=score_desc&categoryId=20000000-0000-0000-0000-000000000001&minScore=80');
+  });
+
+  it('preserves marketplace when switching curation status tabs', () => {
+    const href = buildCurationStatusHref(
+      { status: 'pending', marketplace: 'mercado_livre', cursor: '30' },
+      'approved'
+    );
+
+    expect(href).toBe('/curation?status=approved&marketplace=mercado_livre');
+  });
+
+  it('preserves category when switching curation status tabs', () => {
+    const href = buildCurationStatusHref(
+      {
+        status: 'pending',
+        categoryId: '20000000-0000-0000-0000-000000000001'
+      },
+      'rejected'
+    );
+
+    expect(href).toBe('/curation?status=rejected&categoryId=20000000-0000-0000-0000-000000000001');
+  });
+
+  it('preserves search terms when switching curation status tabs', () => {
+    const href = buildCurationStatusHref(
+      { status: 'pending', q: 'fone gamer' },
+      'approved'
+    );
+
+    expect(href).toBe('/curation?status=approved&q=fone+gamer');
+  });
+
+  it('clears curation filters while preserving current status', () => {
+    const href = buildClearFiltersHref({
+      pathname: '/curation',
+      params: {
+        status: 'approved',
+        marketplace: 'mercado_livre',
+        categoryId: '20000000-0000-0000-0000-000000000001',
+        q: 'fone',
+        sort: 'priority_desc'
+      },
+      preserveStatus: true
+    });
+
+    expect(href).toBe('/curation?status=approved');
+  });
+
+  it('clears all offer filters', () => {
+    const href = buildClearFiltersHref({
+      pathname: '/offers',
+      params: {
+        marketplace: 'mercado_livre',
+        categoryId: '20000000-0000-0000-0000-000000000001',
+        q: 'fone'
+      }
+    });
+
+    expect(href).toBe('/offers');
+  });
+
+  it('detects secondary filters without treating status as an active filter', () => {
+    expect(hasSecondaryFilters({ status: 'approved' })).toBe(false);
+    expect(hasSecondaryFilters({ status: 'approved', marketplace: 'mercado_livre' })).toBe(true);
   });
 });

@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/feedback/empty-state';
 import { ErrorState } from '@/components/feedback/error-state';
 import { PageHeader } from '@/components/layout/app-shell';
 import { ProtectedShell } from '@/components/layout/protected-shell';
+import { buildClearFiltersHref, hasSecondaryFilters } from '@/components/offers/filter-url';
 import { OfferFilters } from '@/components/offers/offer-filters';
 import { OfferTable } from '@/components/offers/offer-table';
 import { Button } from '@/components/ui/button';
@@ -34,10 +35,18 @@ export default function OffersPage({
         }
 
         const data = await listOffersData(session, filters.value);
+        const hasActiveFilters = hasSecondaryFilters(params);
+        const clearFiltersHref = buildClearFiltersHref({ pathname: '/offers', params });
+
         return (
           <>
             <PageHeader title="Ofertas" description="Produtos capturados e ranqueados pelo score MVP v1." />
             <OfferFilters categories={options.categories} tags={options.tags} />
+            {hasActiveFilters ? (
+              <div className="action-bar" style={{ marginBottom: '1rem' }}>
+                <Button as={Link} href={clearFiltersHref} variant="ghost">Limpar filtros</Button>
+              </div>
+            ) : null}
             {data.items.length > 0 ? (
               <OfferTable offers={data.items} />
             ) : (
