@@ -6,6 +6,7 @@
 # Supabase local runtime
 supabase/.branches/
 supabase/.temp/
+.supabase/
 
 # Dependencies
 node_modules/
@@ -19,11 +20,6 @@ build/
 # Logs
 *.log
 
-# Environment
-.env
-.env.*
-!.env.example
-
 # OS
 .DS_Store
 Thumbs.db
@@ -36,11 +32,11 @@ Thumbs.db
 .agents/
 skills-lock.json
 
-# Supabase
-.supabase/
-
 # Coverage
 coverage/
 
 # Turbo
 .turbo/
+
+# AI prompts
+prompts/
