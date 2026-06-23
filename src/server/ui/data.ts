@@ -48,6 +48,7 @@ type OfferRow = {
 
 type CategoryRow = { id: string; name: string; slug?: string; color: string; is_active?: boolean };
 type TagRow = { id: string; name: string; slug?: string; color: string | null; is_active?: boolean };
+type FilterOptionRow = { id: string; name: string; slug?: string | null; color: string | null };
 
 type QueueRow = {
   id: string;
@@ -100,13 +101,13 @@ export async function listOfferFilterOptions(session: AuthenticatedBackofficeSes
   const [categoriesResult, tagsResult] = await Promise.all([
     supabase
       .from('categories')
-      .select('id, name, color')
+      .select('id, name, slug, color')
       .eq('workspace_id', session.workspace.id)
       .eq('is_active', true)
       .order('name', { ascending: true }),
     supabase
       .from('tags')
-      .select('id, name, color')
+      .select('id, name, slug, color')
       .eq('workspace_id', session.workspace.id)
       .eq('is_active', true)
       .order('name', { ascending: true })
@@ -116,8 +117,8 @@ export async function listOfferFilterOptions(session: AuthenticatedBackofficeSes
   if (tagsResult.error) throw new Error(tagsResult.error.message);
 
   return {
-    categories: (categoriesResult.data ?? []) as Array<{ id: string; name: string; color: string }>,
-    tags: (tagsResult.data ?? []) as Array<{ id: string; name: string; color: string | null }>
+    categories: buildFilterOptionLabels((categoriesResult.data ?? []) as FilterOptionRow[]),
+    tags: buildFilterOptionLabels((tagsResult.data ?? []) as FilterOptionRow[])
   };
 }
 
@@ -506,6 +507,30 @@ function parseCursor(cursor: string | undefined): number {
   if (!cursor) return 0;
   const value = Number(cursor);
   return Number.isInteger(value) && value >= 0 ? value : 0;
+}
+
+function buildFilterOptionLabels<TOption extends FilterOptionRow>(
+  options: TOption[]
+): Array<TOption & { label: string }> {
+  const nameCounts = options.reduce((counts, option) => {
+    const key = normalizeOptionName(option.name);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    return counts;
+  }, new Map<string, number>());
+
+  return options.map((option) => {
+    const hasDuplicateName = (nameCounts.get(normalizeOptionName(option.name)) ?? 0) > 1;
+    const suffix = option.slug || option.id.slice(0, 8);
+
+    return {
+      ...option,
+      label: hasDuplicateName ? `${option.name} (${suffix})` : option.name
+    };
+  });
+}
+
+function normalizeOptionName(name: string): string {
+  return name.trim().toLocaleLowerCase('pt-BR');
 }
 
 function toNumber(value: number | string): number {

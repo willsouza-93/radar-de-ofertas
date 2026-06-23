@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/feedback/empty-state';
 import { ErrorState } from '@/components/feedback/error-state';
 import { PageHeader } from '@/components/layout/app-shell';
 import { ProtectedShell } from '@/components/layout/protected-shell';
+import { buildClearFiltersHref, buildCurationStatusHref, hasSecondaryFilters } from '@/components/offers/filter-url';
 import { OfferFilters } from '@/components/offers/offer-filters';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/badge';
@@ -43,6 +44,8 @@ export default function CurationPage({
 
         const selectedStatus = filters.value.status ?? 'pending';
         const data = await listApprovalQueueData(session, { ...filters.value, status: selectedStatus });
+        const hasActiveFilters = hasSecondaryFilters(params);
+        const clearFiltersHref = buildClearFiltersHref({ pathname: '/curation', params, preserveStatus: true });
 
         return (
           <>
@@ -52,7 +55,7 @@ export default function CurationPage({
                 <Button
                   key={tab.status}
                   as={Link}
-                  href={`/curation?status=${tab.status}`}
+                  href={buildCurationStatusHref(params, tab.status)}
                   variant={selectedStatus === tab.status ? 'primary' : 'secondary'}
                 >
                   {tab.label}
@@ -64,8 +67,11 @@ export default function CurationPage({
               showDiscount={false}
               hiddenFields={[{ name: 'status', value: selectedStatus }]}
             />
-            <div style={{ marginBottom: '1rem' }}>
+            <div className="action-bar" style={{ marginBottom: '1rem', alignItems: 'center' }}>
               <StatusBadge status={selectedStatus} />
+              {hasActiveFilters ? (
+                <Button as={Link} href={clearFiltersHref} variant="ghost">Limpar filtros</Button>
+              ) : null}
             </div>
             {data.items.length > 0 ? (
               <ApprovalQueueList items={data.items} />
