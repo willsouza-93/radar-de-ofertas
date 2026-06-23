@@ -20,12 +20,18 @@ export type ApprovalQueueViewItem = {
   updatedAt: string;
 };
 
-export function ApprovalQueueList({ items }: { items: ApprovalQueueViewItem[] }) {
+export function ApprovalQueueList({
+  items,
+  density = 'comfortable'
+}: {
+  items: ApprovalQueueViewItem[];
+  density?: 'comfortable' | 'compact';
+}) {
   return (
     <div className="grid">
       {items.map((item) => (
-        <article className="card" key={item.queueId}>
-          <div className="action-bar" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <article className={`card queue-card queue-card-${density}`} key={item.queueId}>
+          <div className="queue-card-header">
             <div>
               <div className="action-bar">
                 <StatusBadge status={item.status} />
@@ -33,9 +39,9 @@ export function ApprovalQueueList({ items }: { items: ApprovalQueueViewItem[] })
               </div>
               <h3 style={{ marginTop: '0.75rem' }}>{item.title}</h3>
               <p className="muted">{formatPrice(item.currentPrice)} - atualizado em {formatDate(item.updatedAt)}</p>
-              <HighlightList highlights={item.highlights} />
+              {density === 'comfortable' ? <HighlightList highlights={item.highlights} /> : null}
             </div>
-            <ScoreBadge value={item.score} />
+            <ScoreBadge value={item.score} showLabel={density === 'comfortable'} />
           </div>
           <Button as={Link} href={`/curation/${item.queueId}`} variant="primary">
             {item.status === 'pending' ? 'Revisar' : 'Ver historico'}
