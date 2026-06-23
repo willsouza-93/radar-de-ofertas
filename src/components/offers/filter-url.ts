@@ -44,6 +44,33 @@ export function buildFilterHref({
   return buildHref(pathname, nextParams);
 }
 
+export function shouldRunTextSearch(value: string): boolean {
+  const normalizedValue = value.trim();
+  return normalizedValue.length === 0 || normalizedValue.length >= 2;
+}
+
+export function buildSearchHref({
+  pathname,
+  currentSearch,
+  query
+}: {
+  pathname: string;
+  currentSearch: string;
+  query: string;
+}): string | null {
+  if (!shouldRunTextSearch(query)) return null;
+
+  const nextParams = new URLSearchParams(currentSearch);
+  const normalizedQuery = query.trim();
+
+  if (normalizedQuery) nextParams.set('q', normalizedQuery);
+  else nextParams.delete('q');
+
+  nextParams.delete('cursor');
+
+  return buildHref(pathname, nextParams);
+}
+
 export function buildCurationStatusHref(
   params: RawFilterSearchParams,
   status: string

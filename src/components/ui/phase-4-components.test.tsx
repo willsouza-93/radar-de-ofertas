@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EmptyState } from '@/components/feedback/empty-state';
 import {
+  buildSearchHref,
   buildClearFiltersHref,
   buildCurationStatusHref,
   buildFilterHref,
-  hasSecondaryFilters
+  hasSecondaryFilters,
+  shouldRunTextSearch
 } from '@/components/offers/filter-url';
 import { OfferFilters } from '@/components/offers/offer-filters';
 import { StatusBadge, HighlightBadge } from '@/components/ui/badge';
@@ -142,6 +144,25 @@ describe('Phase 4 UI components', () => {
     expect(html).toContain('value="20"');
   });
 
+  it('renders filter controls reset when URL has no filters', () => {
+    navigationState.search = '';
+
+    const html = renderToStaticMarkup(
+      <OfferFilters
+        categories={[{ id: '20000000-0000-0000-0000-000000000001', name: 'Tecnologia' }]}
+        tags={[{ id: '30000000-0000-0000-0000-000000000001', name: 'Frete gratis' }]}
+      />
+    );
+
+    expect(html).toContain('name="q"');
+    expect(html).toContain('value=""');
+    expect(html).toContain('<option value="" selected="">Todos</option>');
+    expect(html).toContain('<option value="" selected="">Todas</option>');
+    expect(html).not.toContain('<option value="mercado_livre" selected="">Mercado Livre</option>');
+    expect(html).not.toContain('value="80"');
+    expect(html).not.toContain('value="20"');
+  });
+
   it('builds cumulative filter navigation targets and drops stale cursors', () => {
     const href = buildFilterHref({
       pathname: '/offers',
@@ -221,5 +242,41 @@ describe('Phase 4 UI components', () => {
   it('detects secondary filters without treating status as an active filter', () => {
     expect(hasSecondaryFilters({ status: 'approved' })).toBe(false);
     expect(hasSecondaryFilters({ status: 'approved', marketplace: 'mercado_livre' })).toBe(true);
+  });
+
+  it('builds debounced text search hrefs preserving existing offer filters', () => {
+    const href = buildSearchHref({
+      pathname: '/offers',
+      currentSearch: 'marketplace=mercado_livre&categoryId=20000000-0000-0000-0000-000000000001&cursor=30',
+      query: ' notebook '
+    });
+
+    expect(href).toBe('/offers?marketplace=mercado_livre&categoryId=20000000-0000-0000-0000-000000000001&q=notebook');
+  });
+
+  it('builds debounced text search hrefs preserving curation status', () => {
+    const href = buildSearchHref({
+      pathname: '/curation',
+      currentSearch: 'status=approved&marketplace=mercado_livre',
+      query: 'notebook'
+    });
+
+    expect(href).toBe('/curation?status=approved&marketplace=mercado_livre&q=notebook');
+  });
+
+  it('removes q when debounced search is cleared', () => {
+    const href = buildSearchHref({
+      pathname: '/curation',
+      currentSearch: 'status=approved&marketplace=mercado_livre&q=notebook',
+      query: ''
+    });
+
+    expect(href).toBe('/curation?status=approved&marketplace=mercado_livre');
+  });
+
+  it('does not build a search href for one-character queries', () => {
+    expect(shouldRunTextSearch('n')).toBe(false);
+    expect(buildSearchHref({ pathname: '/offers', currentSearch: '', query: 'n' })).toBeNull();
+    expect(shouldRunTextSearch('no')).toBe(true);
   });
 });
