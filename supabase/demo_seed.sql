@@ -1,5 +1,5 @@
 -- DEMO ONLY.
--- Rich local dataset for validating the Phase 4B UI.
+-- Rich local dataset for validating the Phase 4C UX/UI.
 -- Do not apply this file to staging or production.
 -- This file intentionally stays separate from supabase/seed.sql.
 

@@ -88,12 +88,39 @@ type DecisionRow = {
 };
 
 export async function getDashboardData(session: AuthenticatedBackofficeSession) {
-  const [pending, topOffers] = await Promise.all([
+  const [
+    pending,
+    topOffers,
+    recentOffers,
+    totalOffers,
+    highScoreOffers,
+    pendingCount,
+    approvedCount,
+    rejectedCount
+  ] = await Promise.all([
     listApprovalQueueData(session, { status: 'pending', limit: 5 }),
-    listOffersData(session, { sort: 'score_desc', limit: 5 })
+    listOffersData(session, { sort: 'score_desc', limit: 4 }),
+    listOffersData(session, { sort: 'captured_desc', limit: 5 }),
+    countOffers(session),
+    countOffers(session, { minScore: 80 }),
+    countApprovalQueueByStatus(session, 'pending'),
+    countApprovalQueueByStatus(session, 'approved'),
+    countApprovalQueueByStatus(session, 'rejected')
   ]);
 
-  return { pending: pending.items, topOffers: topOffers.items };
+  return {
+    pending: pending.items,
+    topOffers: topOffers.items,
+    recentOffers: recentOffers.items,
+    summary: {
+      totalOffers,
+      highScoreOffers,
+      pendingCount,
+      approvedCount,
+      rejectedCount,
+      reviewedCount: approvedCount + rejectedCount
+    }
+  };
 }
 
 export async function listOfferFilterOptions(session: AuthenticatedBackofficeSession) {
@@ -291,6 +318,13 @@ export async function listApprovalQueueData(
 }
 
 export async function countPendingApprovals(session: AuthenticatedBackofficeSession): Promise<number> {
+  return countApprovalQueueByStatus(session, 'pending');
+}
+
+async function countApprovalQueueByStatus(
+  session: AuthenticatedBackofficeSession,
+  status: ApprovalStatus
+): Promise<number> {
   const supabase = await requireSupabase();
   const { count, error } = await supabase
     .from('approval_queue')
@@ -298,6 +332,23 @@ export async function countPendingApprovals(session: AuthenticatedBackofficeSess
     .eq('workspace_id', session.workspace.id)
     .eq('status', 'pending');
 
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+async function countOffers(
+  session: AuthenticatedBackofficeSession,
+  filters: { minScore?: number } = {}
+): Promise<number> {
+  const supabase = await requireSupabase();
+  let query = supabase
+    .from('offers')
+    .select('id', { count: 'exact', head: true })
+    .eq('workspace_id', session.workspace.id);
+
+  if (filters.minScore !== undefined) query = query.gte('score', filters.minScore);
+
+  const { count, error } = await query;
   if (error) throw new Error(error.message);
   return count ?? 0;
 }

@@ -4,7 +4,7 @@ Status: dataset local de demonstracao para validacao funcional da UI.
 
 ## Objetivo
 
-`supabase/demo_seed.sql` cria um conjunto rico de dados para validar a Fase 4B
+`supabase/demo_seed.sql` cria um conjunto rico de dados para validar a Fase 4C
 sem alterar schema, migrations, RLS, funcoes, contracts ou o seed principal.
 
 O arquivo e exclusivo para uso local/demo. Nao aplicar em staging ou producao.
@@ -112,34 +112,45 @@ O dataset cobre:
 
 ### Dashboard
 
-Garante pendencias suficientes para preencher:
+Garante dados suficientes para preencher:
 
+- cards de metricas;
+- distribuicao por status;
 - lista "Requer sua atencao";
+- ofertas recentes;
 - melhores ofertas por score;
 - resumo operacional;
 - badge de pendencias na navegacao.
 
 ### Ofertas
 
-Permite validar:
+Garante uma lista com volume suficiente para validar:
 
+- filtros por marketplace, categoria, tag, score e desconto;
+- busca textual;
+- ordenacao;
 - tabela desktop;
 - cards mobile;
-- filtros por busca, marketplace, categoria, tag, score e desconto;
-- ordenacao;
 - detalhe da oferta;
-- historico de preco.
+- historico de preco;
+- estados de lista populada e sem resultado apos filtros restritivos.
 
 ### Curadoria
 
-Permite validar:
+Garante itens em todos os status para validar:
 
-- tabs Pendentes, Aprovadas e Rejeitadas;
-- filtros preservando status;
-- detalhe pendente com nota e decisoes;
-- detalhe terminal sem acoes de mutacao;
-- historico com notas e decisoes;
-- mensagens de aprovacao/rejeicao e motivos variados.
+- abas Pendentes, Aprovadas e Rejeitadas;
+- preservacao de filtros ao alternar status;
+- detalhe de curadoria;
+- historico de notas e decisoes;
+- formularios de aprovacao/rejeicao em itens pendentes.
+- detalhe terminal sem acoes de mutacao.
+
+### Responsividade
+
+O volume de dados permite validar quebra de linhas, densidade dos cards,
+bottom navigation mobile e listas em desktop/tablet/mobile sem depender de
+integracoes externas.
 
 ## Idempotencia e isolamento
 

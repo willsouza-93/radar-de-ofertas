@@ -8,15 +8,17 @@ import type { OfferHighlight, OfferListItem } from '@/server/offers/types';
 export function OfferCard({
   offer,
   href,
-  cta = 'Ver detalhes'
+  cta = 'Ver detalhes',
+  compact = false
 }: {
   offer: OfferListItem;
   href: string;
   cta?: string;
+  compact?: boolean;
 }) {
   return (
-    <article className="card">
-      <div className="action-bar" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <article className={`card offer-card${compact ? ' offer-card-compact' : ''}`}>
+      <div className="offer-card-header">
         <div>
           <MarketplaceBadge marketplace={offer.marketplace} />
           <h3 style={{ marginTop: '0.75rem' }}>{offer.title}</h3>
@@ -24,7 +26,7 @@ export function OfferCard({
         </div>
         <ScoreBadge value={offer.score} showLabel={false} />
       </div>
-      <HighlightList highlights={offer.highlights} />
+      {compact ? null : <HighlightList highlights={offer.highlights} />}
       <Button as={Link} href={href} variant="secondary">{cta}</Button>
     </article>
   );
