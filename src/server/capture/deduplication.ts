@@ -153,7 +153,9 @@ export function detectMaterialChanges(
     changes.push('discount');
   }
   if ((offer.couponCode ?? null) !== (existing.couponCode ?? null)) changes.push('coupon');
-  if ((offer.freeShipping ?? false) !== (existing.freeShipping ?? false)) changes.push('shipping');
+  if (offer.freeShipping !== null && offer.freeShipping !== undefined) {
+    if (offer.freeShipping !== (existing.freeShipping ?? false)) changes.push('shipping');
+  }
   if ((offer.commissionPercent ?? null) !== (existing.commissionPercent ?? null)) {
     changes.push('commission');
   }

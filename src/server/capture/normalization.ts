@@ -43,7 +43,7 @@ export interface NormalizedOfferDraft {
   previousPrice: number | null;
   discountPercent: number | null;
   couponCode: string | null;
-  freeShipping: boolean;
+  freeShipping: boolean | null;
   commissionPercent: number | null;
   sellerKey: string | null;
   availability: string | null;
@@ -55,10 +55,9 @@ export function normalizeRawOffer(rawOffer: RawOffer, context: CaptureContext): 
   const affiliateUrl = rawAffiliateUrl ? assertHttpUrl(rawAffiliateUrl, 'affiliateUrl') : null;
   const imageUrl = rawOffer.imageUrl ? assertHttpUrl(rawOffer.imageUrl, 'imageUrl') : null;
   const currentPrice = parseMoney(rawOffer.currentPrice, 'currentPrice');
+  const normalizedPreviousPrice = normalizeOptionalScalar(rawOffer.previousPrice);
   const previousPrice =
-    rawOffer.previousPrice === undefined || rawOffer.previousPrice === null
-      ? null
-      : parseMoney(rawOffer.previousPrice, 'previousPrice');
+    normalizedPreviousPrice === null ? null : parseMoney(normalizedPreviousPrice, 'previousPrice');
   const discountPercent = deriveDiscountPercent(currentPrice, previousPrice);
 
   return {
@@ -79,7 +78,7 @@ export function normalizeRawOffer(rawOffer: RawOffer, context: CaptureContext): 
     couponCode: trimToNull(rawOffer.couponCode),
     freeShipping: parseShippingFlag(rawOffer.freeShipping),
     commissionPercent: parsePercent(rawOffer.commissionPercent, 'commissionPercent'),
-    sellerKey: normalizeSellerKey(rawOffer.sellerId ?? rawOffer.sellerName),
+    sellerKey: normalizeSellerKey(trimToNull(rawOffer.sellerId) ?? trimToNull(rawOffer.sellerName)),
     availability: normalizeAvailability(rawOffer.availability)
   };
 }
@@ -177,9 +176,10 @@ export function parsePercent(
   value: string | number | null | undefined,
   fieldName: string
 ): number | null {
-  if (value === null || value === undefined || value === '') return null;
+  const optionalValue = normalizeOptionalScalar(value);
+  if (optionalValue === null) return null;
   const normalized =
-    typeof value === 'number' ? String(value) : value.trim().replace(',', '.');
+    typeof optionalValue === 'number' ? String(optionalValue) : optionalValue.trim().replace(',', '.');
 
   if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) {
     throw new NormalizationError('Invalid percent value.', {
@@ -222,20 +222,21 @@ export function normalizeCurrency(value: string | null | undefined): Currency {
   return 'BRL';
 }
 
-export function parseShippingFlag(value: boolean | string | number | null | undefined): boolean {
-  if (value === null || value === undefined || value === '') return false;
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') {
-    if (value === 1) return true;
-    if (value === 0) return false;
+export function parseShippingFlag(value: boolean | string | number | null | undefined): boolean | null {
+  const optionalValue = normalizeOptionalScalar(value);
+  if (optionalValue === null) return null;
+  if (typeof optionalValue === 'boolean') return optionalValue;
+  if (typeof optionalValue === 'number') {
+    if (optionalValue === 1) return true;
+    if (optionalValue === 0) return false;
     throw new NormalizationError('Invalid shipping flag.', {
       code: 'INVALID_SHIPPING_FLAG',
       safeMessage: 'Informe um valor valido para frete gratis.',
-      details: { value }
+      details: { value: optionalValue }
     });
   }
 
-  const normalized = value.trim().toLowerCase();
+  const normalized = optionalValue.trim().toLowerCase();
   if (['true', '1', 'yes', 'sim', 'gratis', 'free'].includes(normalized)) return true;
   if (['false', '0', 'no', 'nao'].includes(normalized)) return false;
 
@@ -356,7 +357,7 @@ function roundPercent(value: number): number {
 }
 
 function hasAtMostTwoDecimalPlaces(value: number): boolean {
-  return Math.abs(Math.round(value * 100) - value * 100) < 1e-9;
+  return Math.abs(value - Number(value.toFixed(2))) < 1e-9;
 }
 
 function assertMoneyRange(value: number, fieldName: string): number {
@@ -370,4 +371,12 @@ function assertMoneyRange(value: number, fieldName: string): number {
   }
 
   return roundCurrency(value);
+}
+
+function normalizeOptionalScalar<T extends string | number | boolean>(
+  value: T | null | undefined
+): T | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string' && value.trim().length === 0) return null;
+  return value;
 }

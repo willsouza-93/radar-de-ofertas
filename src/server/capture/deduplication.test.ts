@@ -68,6 +68,26 @@ describe('capture deduplication', () => {
     ).toEqual(['price', 'discount', 'coupon', 'shipping', 'availability']);
   });
 
+  it('does not treat unknown free-shipping as a material change', () => {
+    const rawOffer = createTestRawOffer();
+    delete rawOffer.freeShipping;
+    const offer = finalizeTestOffer(
+      normalizeRawOffer(rawOffer, createTestCaptureContext())
+    );
+
+    expect(
+      detectMaterialChanges(offer, {
+        currentPrice: offer.currentPrice,
+        discountPercent: offer.discountPercent ?? null,
+        couponCode: offer.couponCode ?? null,
+        freeShipping: true,
+        commissionPercent: offer.commissionPercent ?? null,
+        sellerKey: offer.sellerKey ?? null,
+        availability: offer.availability ?? null
+      })
+    ).toEqual([]);
+  });
+
   it('allows editorial re-entry after the 24h cooldown', () => {
     const policy = new EditorialCooldownPolicy();
     const offer = finalizeTestOffer(

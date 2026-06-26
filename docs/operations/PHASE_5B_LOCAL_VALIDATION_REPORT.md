@@ -85,7 +85,7 @@ Resumo observado:
 
 ```text
 Test Files  13 passed (13)
-Tests       89 passed (89)
+Tests       94 passed (94)
 ```
 
 ### Build
@@ -137,6 +137,10 @@ Resultado: passou.
   - limite de titulo e cupom alinhados ao schema persistido;
   - score factors e highlights invalidos rejeitados;
   - `capturedAt` exige ISO UTC valido.
+  - campos opcionais em branco de importacao normalizam para `null`;
+  - frete ausente permanece desconhecido;
+  - sellerName e usado quando sellerId vem em branco;
+  - precos numericos grandes e validos com duas casas sao aceitos.
 - Deduplication:
   - external ID;
   - URL hash fallback;

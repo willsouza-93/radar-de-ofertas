@@ -40,6 +40,38 @@ describe('capture normalization', () => {
     expect(draft.sellerKey).toBe('loja oficial');
   });
 
+  it('treats blank optional previous price as missing', () => {
+    const draft = normalizeRawOffer(
+      createTestRawOffer({
+        previousPrice: '   '
+      }),
+      createTestCaptureContext()
+    );
+
+    expect(draft.previousPrice).toBeNull();
+    expect(draft.discountPercent).toBeNull();
+  });
+
+  it('preserves missing free-shipping as unknown', () => {
+    const rawOffer = createTestRawOffer();
+    delete rawOffer.freeShipping;
+    const draft = normalizeRawOffer(rawOffer, createTestCaptureContext());
+
+    expect(draft.freeShipping).toBeNull();
+  });
+
+  it('falls back to sellerName when sellerId is blank', () => {
+    const draft = normalizeRawOffer(
+      createTestRawOffer({
+        sellerId: '   ',
+        sellerName: ' Loja Principal '
+      }),
+      createTestCaptureContext()
+    );
+
+    expect(draft.sellerKey).toBe('loja principal');
+  });
+
   it('allows raw offers without affiliate URL for future enrichment', () => {
     const draft = normalizeRawOffer(
       createTestRawOffer({
@@ -64,6 +96,10 @@ describe('capture normalization', () => {
 
   it('rejects numeric prices with more than two decimal places', () => {
     expect(() => parseMoney(19.999, 'currentPrice')).toThrow('Invalid money precision');
+  });
+
+  it('accepts large valid two-decimal numeric prices', () => {
+    expect(parseMoney(1234567890.12, 'currentPrice')).toBe(1234567890.12);
   });
 
   it('rejects prices outside numeric(12,2)', () => {

@@ -58,6 +58,12 @@ marketplace APIs, Telegram, publicacao ou IA.
   - score rejeita fatores nao finitos e highlights nao suportados;
   - disponibilidade participa da decisao de reentrada editorial;
   - pipeline rejeita mismatch entre item bruto e contexto de conector.
+- Revisados comentarios adicionais de importacao:
+  - `previousPrice` em branco normaliza para `null`;
+  - frete ausente permanece desconhecido;
+  - sellerName e usado quando sellerId esta em branco;
+  - precos numericos grandes validos nao sao rejeitados por erro de precisao
+    binaria.
 - Implementada deduplicacao sem banco:
   - `externalId` prioritario;
   - fallback por hash SHA-256 da URL canonica;

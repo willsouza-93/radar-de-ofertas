@@ -65,7 +65,7 @@ export interface NormalizedOffer {
   previousPrice?: number | null;
   discountPercent?: number | null;
   couponCode?: string | null;
-  freeShipping?: boolean;
+  freeShipping?: boolean | null;
   commissionPercent?: number | null;
   categoryId?: string | null;
   tagIds?: string[];
