@@ -134,3 +134,107 @@ marketplace APIs, Telegram, publicacao ou IA.
 - A cobertura percentual automatica nao foi medida porque o projeto nao possui
   script de coverage configurado; a suite unitaria cobre todos os modulos do
   dominio criado.
+
+## Fase 5C - First Connector Manual
+
+Status: implementado localmente para revisao.
+
+### Objetivo
+
+Validar o primeiro connector real sem acoplar marketplace, scheduler, IA,
+Telegram, scraping, Edge Functions ou APIs externas.
+
+Fluxo implementado:
+
+`Entrada manual -> RawOffer -> Capture Pipeline -> Persistencia -> Offers/Snapshots -> tentativa controlada de curadoria`
+
+### Entregas
+
+- Criado connector manual em `src/server/connectors/manual`.
+- O connector manual implementa o contrato generico `Connector`.
+- O connector produz apenas `RawOffer`.
+- Nenhuma regra de negocio foi colocada no connector.
+- Criado adapter de import manual em `src/server/capture/manual-import.ts`.
+- Criado repositório Supabase server-side em
+  `src/server/capture/supabase-persistence.ts`.
+- Criada tela administrativa simples em `/capture/manual` com textarea JSON.
+- Criada Server Action `importManualOffersAction`.
+- Navegacao adiciona "Importar" apenas para Admin.
+- O workspace continua derivado server-side pela membership ativa.
+- Editor nao executa import manual.
+- Public Visitor/anon nao acessa o backoffice.
+
+### Persistencia
+
+- Novas ofertas manuais usam marketplace `manual`.
+- `dedupeKey` vem do dominio de captura.
+- Oferta existente e atualizada por `dedupeKey`.
+- Mudanca relevante gera snapshot de preco.
+- Reentrada editorial usa `EditorialCooldownPolicy` de 24 horas.
+- `affiliateUrl` continua opcional no dominio de captura.
+- Limite atual: o schema existente de `offers.affiliate_url` e `not null`.
+  Portanto, nova oferta sem `affiliateUrl` e processada pelo pipeline, mas nao
+  pode ser persistida em `offers` nesta fase.
+
+### Curadoria
+
+- O adapter tenta criar `approval_queue.pending` para novas oportunidades.
+- A Fase 3B endureceu a curadoria:
+  - clientes autenticados nao possuem grant para inserir/atualizar
+    `approval_queue`;
+  - `approval_decisions` nao podem ser inseridas diretamente;
+  - transicoes oficiais permanecem protegidas por `apply_approval_decision`.
+- Por isso, sem migration/RPC nova, ambientes atuais podem persistir
+  `offers` e `price_snapshots`, mas bloquear materializacao/reentrada da fila.
+- Essa limitacao foi documentada em vez de contornar RLS com service role.
+
+### Observabilidade
+
+- Cada import gera:
+  - `correlationId`;
+  - `captureRunId`;
+  - logs estruturados do pipeline;
+  - resumo com recebidas, processadas, invalidas, persistidas, snapshots e
+    estado da fila.
+
+### Testes
+
+- Criados testes para:
+  - connector manual;
+  - import manual completo;
+  - dedupe de mesma oferta;
+  - ausencia de nova oportunidade enquanto pendente;
+  - reentrada editorial apos 24 horas;
+  - reentrada por mudanca material de preco;
+  - captura sem `affiliateUrl` valida no pipeline, mas bloqueada na
+    persistencia atual.
+
+### Restricoes preservadas
+
+- Nenhuma migration criada.
+- Nenhuma tabela criada.
+- Nenhuma policy ou RLS alterada.
+- Nenhuma alteracao em Supabase staging ou producao.
+- Nenhum scheduler criado.
+- Nenhuma Edge Function criada.
+- Nenhuma integracao externa criada.
+- Nenhum conector de marketplace criado.
+- Nenhum uso de service role no frontend.
+
+### Decisoes
+
+- O conector manual e a referencia inicial para futuros conectores.
+- O connector nao conhece Supabase, Next.js, banco ou UI.
+- O pipeline permanece independente da UI.
+- O adapter server-side faz a ponte entre connector, pipeline e persistencia.
+- A reentrada editorial terminal precisa de funcao controlada futura no banco;
+  update direto de `approval_queue` continua proibido.
+
+### Riscos e limitacoes
+
+- A fila de curadoria pode nao ser criada automaticamente enquanto nao existir
+  uma superficie segura aprovada para materializar `approval_queue`.
+- Novas capturas sem `affiliateUrl` precisam de enriquecimento antes de
+  persistir em `offers`.
+- O score da captura ainda e estrutural (`capture-structure-v1`), nao o score
+  definitivo de negocio.

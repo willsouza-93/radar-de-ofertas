@@ -4,9 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { createSupabaseServerClient } from '@/server/supabase/server';
+import { importManualOffers } from '@/server/capture/manual-import';
+import { SupabaseCapturePersistenceRepository } from '@/server/capture/supabase-persistence';
+import { AppError } from '@/server/offers/errors';
 import {
   approveActionSchema,
   loginActionSchema,
+  manualImportActionSchema,
   noteActionSchema,
   rejectActionSchema
 } from '@/server/ui/action-schemas';
@@ -39,6 +43,48 @@ export async function signOutAction(): Promise<void> {
   const supabase = await createSupabaseServerClient();
   await supabase?.auth.signOut();
   redirect('/login');
+}
+
+export async function importManualOffersAction(formData: FormData): Promise<void> {
+  const parsed = manualImportActionSchema.safeParse({
+    payload: formData.get('payload')
+  });
+  if (!parsed.success) redirect('/capture/manual?error=VALIDATION_ERROR');
+
+  const supabase = await requireSupabaseForAction();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) redirect('/login');
+
+  let redirectUrl: string;
+  try {
+    const result = await importManualOffers(parsed.data.payload, {
+      actorUserId: userData.user.id,
+      repository: new SupabaseCapturePersistenceRepository(supabase),
+      logger: console
+    });
+    const params = new URLSearchParams({
+      imported: '1',
+      received: String(result.received),
+      persisted: String(result.persisted),
+      invalid: String(result.invalid),
+      queueCreated: String(result.queueCreated),
+      queueReentered: String(result.queueReentered),
+      queueSkipped: String(result.queueSkipped),
+      warnings: String(result.failures.length),
+      run: result.captureRunId
+    });
+
+    revalidatePath('/dashboard');
+    revalidatePath('/offers');
+    revalidatePath('/curation');
+    revalidatePath('/capture/manual');
+    redirectUrl = `/capture/manual?${params.toString()}`;
+  } catch (error) {
+    const code = error instanceof AppError ? error.code : 'ACTION_FAILED';
+    redirect(`/capture/manual?error=${code}`);
+  }
+
+  redirect(redirectUrl);
 }
 
 export async function addReviewNoteAction(formData: FormData): Promise<void> {
