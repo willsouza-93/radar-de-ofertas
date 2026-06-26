@@ -71,4 +71,14 @@ describe('capture contracts', () => {
     expectTypeOf(context).toMatchTypeOf<CaptureContext>();
     expect(pipelineResult.items[0]?.status).toBe('processed');
   });
+
+  it('models affiliateUrl as optional enrichment, not offer identity', () => {
+    const context = createTestCaptureContext();
+    const normalizedOffer: NormalizedOffer = finalizeTestOffer(
+      normalizeRawOffer(createTestRawOffer({ affiliateUrl: null }), context)
+    );
+
+    expect(normalizedOffer.affiliateUrl).toBeNull();
+    expect(normalizedOffer.dedupeKey).toBe('manual_import:external:offer-123');
+  });
 });

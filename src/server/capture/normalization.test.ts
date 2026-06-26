@@ -40,6 +40,18 @@ describe('capture normalization', () => {
     expect(draft.sellerKey).toBe('loja oficial');
   });
 
+  it('allows raw offers without affiliate URL for future enrichment', () => {
+    const draft = normalizeRawOffer(
+      createTestRawOffer({
+        affiliateUrl: null
+      }),
+      createTestCaptureContext()
+    );
+
+    expect(draft.affiliateUrl).toBeNull();
+    expect(draft.canonicalSourceUrl).toBe('https://example.com/produto/notebook?sku=123');
+  });
+
   it('rejects unsupported currencies', () => {
     expect(() => normalizeCurrency('USD')).toThrow('Unsupported currency');
   });

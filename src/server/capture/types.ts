@@ -55,7 +55,7 @@ export interface NormalizedOffer {
   dedupeKey: string;
   canonicalSourceUrl: string;
   sourceUrl: string;
-  affiliateUrl: string;
+  affiliateUrl: string | null;
   title: string;
   currentPrice: number;
   currency: Currency;

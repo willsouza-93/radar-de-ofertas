@@ -11,14 +11,14 @@ import { createTestCaptureContext, createTestRawOffer, finalizeTestOffer } from 
 describe('capture deduplication', () => {
   it('uses external identity before URL hash', () => {
     const result = calculateDedupeKey({
-      sourceKey: 'mercado_livre',
+      sourceKey: 'official_feed',
       externalId: 'MLB123',
       canonicalSourceUrl: 'https://example.com/p/123'
     });
 
     expect(result).toEqual({
       externalId: 'MLB123',
-      dedupeKey: 'mercado_livre:external:MLB123'
+      dedupeKey: 'official_feed:external:MLB123'
     });
   });
 

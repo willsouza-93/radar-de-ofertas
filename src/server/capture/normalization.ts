@@ -34,7 +34,7 @@ export interface NormalizedOfferDraft {
   rawExternalId: string | null;
   canonicalSourceUrl: string;
   sourceUrl: string;
-  affiliateUrl: string;
+  affiliateUrl: string | null;
   title: string;
   currentPrice: number;
   currency: Currency;
@@ -50,7 +50,8 @@ export interface NormalizedOfferDraft {
 
 export function normalizeRawOffer(rawOffer: RawOffer, context: CaptureContext): NormalizedOfferDraft {
   const sourceUrl = assertHttpUrl(rawOffer.sourceUrl, 'sourceUrl');
-  const affiliateUrl = assertHttpUrl(rawOffer.affiliateUrl ?? '', 'affiliateUrl');
+  const rawAffiliateUrl = trimToNull(rawOffer.affiliateUrl);
+  const affiliateUrl = rawAffiliateUrl ? assertHttpUrl(rawAffiliateUrl, 'affiliateUrl') : null;
   const imageUrl = rawOffer.imageUrl ? assertHttpUrl(rawOffer.imageUrl, 'imageUrl') : null;
   const currentPrice = parseMoney(rawOffer.currentPrice, 'currentPrice');
   const previousPrice =

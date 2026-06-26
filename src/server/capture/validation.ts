@@ -50,14 +50,6 @@ export function validateRawOffer(rawOffer: RawOffer): void {
     });
   }
 
-  if (rawOffer.affiliateUrl === undefined || rawOffer.affiliateUrl === null || !rawOffer.affiliateUrl.trim()) {
-    issues.push({
-      field: 'affiliateUrl',
-      code: 'AFFILIATE_URL_REQUIRED',
-      safeMessage: 'URL de afiliado obrigatoria.'
-    });
-  }
-
   if (issues.length > 0) throwValidationError(issues);
 }
 

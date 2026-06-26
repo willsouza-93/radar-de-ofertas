@@ -19,6 +19,7 @@ Incluido:
 - observabilidade de dominio;
 - hierarquia de erros;
 - testes unitarios.
+- revisao de conformidade arquitetural da Fase 5B.
 
 Fora de escopo confirmado:
 
@@ -84,7 +85,7 @@ Resumo observado:
 
 ```text
 Test Files  13 passed (13)
-Tests       75 passed (75)
+Tests       79 passed (79)
 ```
 
 ### Build
@@ -123,6 +124,10 @@ Resultado: passou.
   - moeda;
   - preco;
   - dedupe key.
+- Affiliate URL:
+  - raw capture sem `affiliateUrl`;
+  - normalized offer com `affiliateUrl = null`;
+  - dedupe independente de `affiliateUrl`.
 - Deduplication:
   - external ID;
   - URL hash fallback;
@@ -148,6 +153,8 @@ Resultado: passou.
 - O pipeline retorna resultados em memoria; persistencia ficara para fase
   futura.
 - Falhas de item geram `PipelineItemFailure` sem interromper o lote.
+- `affiliateUrl` nao e requisito minimo de captura e pode ser enriquecido em
+  fase futura.
 
 ## Riscos residuais
 

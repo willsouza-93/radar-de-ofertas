@@ -18,6 +18,16 @@ describe('capture validation', () => {
     ).toThrow(ValidationError);
   });
 
+  it('does not require affiliateUrl at raw capture time', () => {
+    expect(() =>
+      validateRawOffer(
+        createTestRawOffer({
+          affiliateUrl: null
+        })
+      )
+    ).not.toThrow();
+  });
+
   it('accepts valid normalized offers', () => {
     const context = createTestCaptureContext();
     const draft = normalizeRawOffer(createTestRawOffer(), context);

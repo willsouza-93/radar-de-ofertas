@@ -46,6 +46,11 @@ marketplace APIs, Telegram, publicacao ou IA.
   - moeda suportada;
   - preco valido;
   - dedupe key obrigatoria.
+- Revisado alinhamento arquitetural de `affiliateUrl`:
+  - `RawOffer` pode chegar sem `affiliateUrl`;
+  - `NormalizedOffer.affiliateUrl` pode permanecer `null`;
+  - ausencia de `affiliateUrl` nao bloqueia captura valida;
+  - `affiliateUrl` nao participa de deduplicacao.
 - Implementada deduplicacao sem banco:
   - `externalId` prioritario;
   - fallback por hash SHA-256 da URL canonica;
@@ -105,6 +110,8 @@ marketplace APIs, Telegram, publicacao ou IA.
 - O pipeline classifica falhas por item para preservar processamento parcial.
 - O cooldown editorial inicial e 24 horas, preparado para futura configuracao
   por workspace.
+- `affiliateUrl` e tratado como enriquecimento opcional, nao identidade da
+  oferta.
 
 ### Riscos e limitacoes
 
