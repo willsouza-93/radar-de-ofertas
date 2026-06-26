@@ -8,6 +8,10 @@ atual.
 Evitar ofertas duplicadas sem perder historico de preco, sinais de score ou
 auditoria de captura.
 
+Deduplicacao nao deve impedir reentrada editorial. Uma oferta existente pode
+ser tecnicamente a mesma oferta e, ainda assim, voltar a ser uma oportunidade
+editorial apos mudanca material ou cooldown.
+
 ## Identidades relevantes
 
 ### Mesma oferta
@@ -100,6 +104,69 @@ Ignorar item capturado quando:
 
 Mesmo ignorado, o resumo da captura deve contar o item como `unchanged` ou
 `invalid`, conforme o caso.
+
+## Deduplicacao tecnica
+
+Deduplicacao tecnica responde a pergunta:
+
+```text
+Este item ja foi processado nesta mesma condicao tecnica?
+```
+
+Exemplos:
+
+- mesma captura;
+- mesmo preco;
+- mesma URL canonica;
+- mesma janela;
+- mesma execucao.
+
+Resultado esperado:
+
+```text
+UNCHANGED (noop)
+```
+
+Sem nova curadoria e sem nova publicacao futura.
+
+## Reentrada editorial
+
+Reentrada editorial responde a pergunta:
+
+```text
+Esta oferta voltou a ser relevante para revisao humana?
+```
+
+Uma oferta ja capturada anteriormente nao e invalida por ja existir.
+
+Ela pode voltar ao pipeline editorial quando houver mudanca material:
+
+- preco mudou;
+- desconto mudou;
+- cupom mudou;
+- frete mudou;
+- comissao mudou;
+- seller mudou;
+- disponibilidade mudou.
+
+Resultado esperado:
+
+- novo snapshot, quando houver sinal persistivel;
+- novo score;
+- nova avaliacao na curadoria.
+
+Mesmo sem mudanca material, a oferta pode voltar a ser considerada depois do
+cooldown editorial:
+
+```text
+Editorial Cooldown = 24 horas
+```
+
+O cooldown editorial nao e timeout tecnico, retry, lock ou janela de captura. E
+uma regra de produto para permitir nova avaliacao e publicacao futura de uma
+oportunidade que continua relevante.
+
+Em fase futura, esse valor podera ser configuravel por workspace.
 
 ## Quando atualizar
 

@@ -26,6 +26,22 @@ Resultado esperado:
 - atualizar `last_seen_at`;
 - criar snapshot apenas se houver mudanca relevante;
 - manter uma unica `approval_queue` por oferta/workspace.
+- avaliar reentrada editorial separadamente da deduplicacao tecnica.
+
+### Oferta reaparece apos algum tempo
+
+Resultado esperado:
+
+- se nao houve mudanca material e o cooldown editorial nao expirou, tratar como
+  `unchanged/noop`;
+- se houve mudanca material, atualizar oferta, criar snapshot quando aplicavel,
+  recalcular score e permitir nova curadoria;
+- se nao houve mudanca material, mas o cooldown editorial de 24 horas expirou,
+  permitir nova avaliacao editorial;
+- nunca tratar a oferta como invalida apenas por ela ja existir.
+
+O cooldown editorial e uma regra de produto. Ele nao substitui idempotency key,
+retry, lock, cursor ou janela tecnica.
 
 ### Captura repetida apos retry
 

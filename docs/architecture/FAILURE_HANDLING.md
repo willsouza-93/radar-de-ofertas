@@ -8,6 +8,11 @@ retry, backoff, circuit breaker ou dead-letter nesta fase.
 Definir como o pipeline deve reagir a falhas externas, dados invalidos,
 concorrencia e problemas parciais sem perder historico ou criar duplicidade.
 
+Em ambientes com multiplos conectores ativos, falhas devem ser isoladas por
+conector sempre que possivel. A falha de Amazon, Shopee ou qualquer outra fonte
+nao deve interromper Mercado Livre, Magalu, AliExpress ou importador manual se
+eles estiverem saudaveis.
+
 ## Classificacao de falhas
 
 | Classe | Exemplo | Recuperavel | Escopo |
@@ -116,6 +121,9 @@ Falhar lote inteiro quando:
 - workspace/membership invalido;
 - banco indisponivel;
 - configuracao critica ausente.
+
+Falha de credencial ou contrato deve afetar o conector correspondente, nao todos
+os conectores do workspace.
 
 ## Recuperacao
 

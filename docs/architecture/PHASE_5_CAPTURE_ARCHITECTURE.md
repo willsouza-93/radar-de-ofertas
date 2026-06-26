@@ -172,6 +172,57 @@ Resultado possivel:
 - `unchanged`: mesma oferta sem mudanca relevante;
 - `conflict`: duas identidades apontam para registros diferentes.
 
+Deduplicacao e um controle tecnico. Ela evita duplicidade de processamento,
+mas nao decide se uma oferta deve ou nao voltar para a curadoria editorial.
+
+### 5.1 Editorial re-entry
+
+Uma oferta ja capturada anteriormente nao deve ser considerada invalida apenas
+por ja existir.
+
+O pipeline deve separar tres conceitos:
+
+```text
+Deduplication
+  - mesma captura, mesma URL, mesmo preco, mesma janela ou mesma execucao
+  - resultado tecnico: unchanged/noop
+  - sem nova curadoria
+
+Update
+  - mesma oferta com mudanca material
+  - resultado tecnico: update + snapshot + score
+  - pode gerar nova curadoria
+
+Editorial Re-entry
+  - mesma oferta volta a ser editorialmente relevante
+  - resultado editorial: nova avaliacao humana
+  - nao e timeout tecnico
+```
+
+Condicoes que podem gerar reentrada editorial:
+
+- preco mudou;
+- desconto mudou;
+- cupom mudou;
+- frete mudou;
+- comissao mudou;
+- seller mudou;
+- disponibilidade mudou;
+- passou o cooldown editorial.
+
+Para o MVP futuro, o valor inicial documentado e:
+
+```text
+Editorial Cooldown = 24 horas
+```
+
+Depois de 24 horas, uma oferta pode voltar a ser considerada para nova
+curadoria e publicacao futura mesmo mantendo o mesmo preco.
+
+Esse valor deve ser tratado como conceito editorial, nao como retry, lock,
+janela tecnica ou timeout de captura. Em fase futura, o cooldown podera ser
+configuravel por workspace.
+
 ### 6. Score
 
 Calcula score deterministico.

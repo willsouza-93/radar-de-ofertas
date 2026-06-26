@@ -24,6 +24,43 @@ Connector -> RawOffer[] -> Pipeline Core
 - Cada conector declara capabilities e versao.
 - Cada conector pode falhar parcialmente sem quebrar o pipeline inteiro.
 - Cada conector deve respeitar termos de uso, rate limit e permissao oficial.
+- Workspaces devem poder operar multiplos conectores ao mesmo tempo em fase
+  futura.
+
+## Suporte a multiplos conectores
+
+A arquitetura deve permitir que um mesmo workspace tenha varios conectores
+ativos simultaneamente:
+
+```text
+Workspace
+  - Amazon
+  - Mercado Livre
+  - Shopee
+  - Magalu
+  - AliExpress
+  - Importador Manual
+```
+
+O core nao deve assumir que existe apenas uma origem ativa por workspace.
+Cada conector deve possuir contexto operacional proprio:
+
+- `connectorId`;
+- `connectorVersion`;
+- `correlationId`;
+- `captureRunId`;
+- metricas independentes;
+- logs independentes;
+- rate limit independente;
+- retries independentes;
+- observabilidade independente.
+
+A falha de um conector nao deve interromper os demais. Uma captura com Shopee
+em warning, por exemplo, nao deve bloquear Mercado Livre, importador manual ou
+outro conector saudavel.
+
+Em fase futura, a orquestracao deve tratar conectores como unidades isoladas de
+execucao e consolidar apenas o resumo operacional por workspace.
 
 ## Responsabilidades do conector
 
@@ -196,6 +233,32 @@ Mudancas incompativeis:
 
 Mudancas incompativeis devem exigir nova versao maior do conector e plano de
 reprocessamento.
+
+## Feature flags operacionais
+
+Feature flags nao representam apenas habilitacao de funcionalidades de produto.
+Elas tambem podem controlar operacao de conectores e canais:
+
+- `connector.amazon.enabled`;
+- `connector.shopee.enabled`;
+- `connector.magalu.enabled`;
+- `connector.telegram.enabled`;
+- `ai.enabled`.
+
+Essas flags nao sao implementadas na Fase 5A. A decisao documentada e apenas
+que o desenho futuro deve permitir desligar uma capacidade especifica sem
+derrubar o produto inteiro.
+
+## Configuracao futura por workspace
+
+Em fase futura, cada workspace podera escolher:
+
+- conectores ativos;
+- cooldown editorial;
+- canais de publicacao.
+
+A Fase 5A nao define modelo de banco para isso. O requisito fica registrado
+para orientar a modelagem futura sem antecipar migrations.
 
 ## Estrategia recomendada para o MVP futuro
 

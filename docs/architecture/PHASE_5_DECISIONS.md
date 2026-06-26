@@ -40,6 +40,24 @@ canonica com hash.
 Motivo: compatibilidade com a implementacao atual e menor risco de merge
 indevido.
 
+### 5.1 Reentrada editorial separada da deduplicacao
+
+Decisao: uma oferta existente nao e invalida por ja existir. Deduplicacao
+tecnica evita duplicidade; reentrada editorial decide se a oferta volta para
+curadoria.
+
+Motivo: uma oportunidade pode voltar a ser relevante apos mudanca material ou
+apos cooldown editorial.
+
+Cooldown inicial documentado:
+
+```text
+Editorial Cooldown = 24 horas
+```
+
+Esse valor e editorial, nao tecnico, e podera ser configuravel por workspace em
+fase futura.
+
 ### 6. Affiliate URL nao e identidade primaria
 
 Decisao: `affiliate_url` e dado de destino/monetizacao, nao chave de dedupe.
@@ -58,6 +76,22 @@ Decisao: toda execucao futura deve ter correlation ID e logs estruturados.
 
 Motivo: diagnosticar falhas sem depender de reproducoes manuais.
 
+### 8.1 Multiplos conectores por workspace
+
+Decisao: um workspace deve poder operar varios conectores simultaneamente, cada
+um com contexto operacional independente.
+
+Motivo: a falha, rate limit ou retry de uma fonte nao deve interromper as
+demais.
+
+Contexto minimo por conector:
+
+- `connectorId`;
+- `connectorVersion`;
+- `correlationId`;
+- `captureRunId`;
+- metricas, logs, rate limit, retries e observabilidade independentes.
+
 ### 9. Publicacao futura fica desacoplada
 
 Decisao: pipeline de publicacao consome apenas ofertas aprovadas.
@@ -70,6 +104,27 @@ Decisao: IA pode sugerir texto, mas nao aprovar, publicar ou pontuar na primeira
 etapa.
 
 Motivo: reduzir risco de automacao indevida e manter controle humano.
+
+### 11. Feature flags como controle operacional
+
+Decisao: feature flags futuras podem controlar operacao de conectores, canais e
+IA, nao apenas lancamento de telas.
+
+Exemplos:
+
+- `connector.amazon.enabled`;
+- `connector.shopee.enabled`;
+- `connector.magalu.enabled`;
+- `connector.telegram.enabled`;
+- `ai.enabled`.
+
+### 12. Configuracao futura por workspace
+
+Decisao: em fase futura, cada workspace podera escolher conectores ativos,
+cooldown editorial e canais de publicacao.
+
+Motivo: workspaces podem ter estrategias, fontes e cadencias editoriais
+diferentes.
 
 ## Alternativas descartadas
 
@@ -112,6 +167,8 @@ Descartado porque viola aprovacao humana obrigatoria.
 - Sem tabela de execucao, a primeira implementacao precisa decidir nivel de
   auditoria.
 - Enum atual de marketplace pode exigir evolucao para fontes genericas.
+- Reentrada editorial sem regra clara pode gerar excesso de itens na curadoria.
+- Multiplos conectores exigem isolamento de falha e observabilidade por origem.
 
 ## Decisoes adiadas
 
@@ -121,5 +178,7 @@ Descartado porque viola aprovacao humana obrigatoria.
 - Scheduler escolhido.
 - Retencao de payload bruto.
 - Politica para ofertas aprovadas que mudam de preco.
+- Modelo fisico de configuracao por workspace.
+- Modelo fisico de feature flags operacionais.
 - Provedor/modelo de IA.
 - Modelo de publicacao e posts.

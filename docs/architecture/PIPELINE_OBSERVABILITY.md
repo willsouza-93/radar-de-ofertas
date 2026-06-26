@@ -11,6 +11,7 @@ sensiveis.
 ## Principios
 
 - Toda execucao possui `correlationId`.
+- Cada conector possui observabilidade independente.
 - Logs devem ser estruturados.
 - Erros devem ter codigo estavel.
 - Dados sensiveis devem ser mascarados.
@@ -48,6 +49,10 @@ Campos comuns:
 - `errorCode`
 - `safeMessage`
 
+Em cenarios com multiplos conectores ativos no mesmo workspace, esses campos
+devem permitir separar claramente a saude de Amazon, Mercado Livre, Shopee,
+Magalu, AliExpress, importador manual ou qualquer outro conector futuro.
+
 Nao registrar:
 
 - tokens;
@@ -66,6 +71,7 @@ Nao registrar:
 - capturas com falha;
 - duracao por conector;
 - itens recebidos por captura.
+- conectores ativos por workspace.
 
 ### Itens
 
@@ -91,6 +97,11 @@ Nao registrar:
 - erro de persistencia;
 - erro de score;
 - retries realizados.
+- falhas isoladas por conector.
+
+Falha de um conector nao deve mascarar a saude dos demais. Dashboards e logs
+futuros devem deixar claro quando uma origem falhou e outras continuaram
+operando normalmente.
 
 ## Eventos
 
