@@ -62,6 +62,7 @@ export function finalizeTestOffer(draft: NormalizedOfferDraft): NormalizedOffer 
     couponCode: draft.couponCode,
     freeShipping: draft.freeShipping,
     commissionPercent: draft.commissionPercent,
-    sellerKey: draft.sellerKey
+    sellerKey: draft.sellerKey,
+    availability: draft.availability
   };
 }

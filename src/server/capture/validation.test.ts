@@ -28,6 +28,17 @@ describe('capture validation', () => {
     ).not.toThrow();
   });
 
+  it('rejects connector context mismatches', () => {
+    expect(() =>
+      validateRawOffer(
+        createTestRawOffer({
+          connectorId: 'wrong-connector'
+        }),
+        createTestCaptureContext()
+      )
+    ).toThrow(ValidationError);
+  });
+
   it('accepts valid normalized offers', () => {
     const context = createTestCaptureContext();
     const draft = normalizeRawOffer(createTestRawOffer(), context);
@@ -61,6 +72,30 @@ describe('capture validation', () => {
         externalId: dedupe.externalId,
         dedupeKey: dedupe.dedupeKey,
         currentPrice: -1
+      })
+    ).toThrow(ValidationError);
+  });
+
+  it('enforces persistence-aligned title and coupon limits', () => {
+    const context = createTestCaptureContext();
+    const draft = normalizeRawOffer(
+      createTestRawOffer({
+        title: 'A'.repeat(501),
+        couponCode: 'C'.repeat(81)
+      }),
+      context
+    );
+    const dedupe = calculateDedupeKey({
+      sourceKey: draft.sourceKey,
+      externalId: draft.rawExternalId,
+      canonicalSourceUrl: draft.canonicalSourceUrl
+    });
+
+    expect(() =>
+      validateNormalizedOffer({
+        ...draft,
+        externalId: dedupe.externalId,
+        dedupeKey: dedupe.dedupeKey
       })
     ).toThrow(ValidationError);
   });

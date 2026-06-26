@@ -42,6 +42,7 @@ export interface RawOffer {
   commissionPercent?: string | number | null;
   sellerId?: string | null;
   sellerName?: string | null;
+  availability?: string | null;
   categoryHint?: string | null;
   rawPayloadRef?: string | null;
   sourceMetadata?: Record<string, unknown>;
@@ -69,6 +70,7 @@ export interface NormalizedOffer {
   categoryId?: string | null;
   tagIds?: string[];
   sellerKey?: string | null;
+  availability?: string | null;
   normalizationWarnings?: CaptureWarning[];
 }
 

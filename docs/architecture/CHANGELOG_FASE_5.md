@@ -51,6 +51,13 @@ marketplace APIs, Telegram, publicacao ou IA.
   - `NormalizedOffer.affiliateUrl` pode permanecer `null`;
   - ausencia de `affiliateUrl` nao bloqueia captura valida;
   - `affiliateUrl` nao participa de deduplicacao.
+- Revisados comentarios do PR de conformidade arquitetural:
+  - dedupe manual/import normaliza casing de external IDs;
+  - validacoes antecipam limites persistidos de titulo, cupom e dinheiro;
+  - `capturedAt` exige ISO UTC valido;
+  - score rejeita fatores nao finitos e highlights nao suportados;
+  - disponibilidade participa da decisao de reentrada editorial;
+  - pipeline rejeita mismatch entre item bruto e contexto de conector.
 - Implementada deduplicacao sem banco:
   - `externalId` prioritario;
   - fallback por hash SHA-256 da URL canonica;

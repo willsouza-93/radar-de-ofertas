@@ -126,7 +126,7 @@ export function calculateDedupeKey(args: {
   canonicalSourceUrl: string;
 }): DedupeResult {
   const sourceKey = normalizeSourceKey(args.sourceKey);
-  const externalId = normalizeExternalId(args.externalId);
+  const externalId = normalizeExternalId(sourceKey, args.externalId);
 
   if (externalId) {
     return {
@@ -158,6 +158,9 @@ export function detectMaterialChanges(
     changes.push('commission');
   }
   if ((offer.sellerKey ?? null) !== (existing.sellerKey ?? null)) changes.push('seller');
+  if ((offer.availability ?? null) !== (existing.availability ?? null)) {
+    changes.push('availability');
+  }
 
   return changes;
 }
@@ -174,7 +177,12 @@ function normalizeSourceKey(sourceKey: string): string {
   return normalized;
 }
 
-function normalizeExternalId(externalId: string | null | undefined): string | null {
+function normalizeExternalId(sourceKey: string, externalId: string | null | undefined): string | null {
   const trimmed = externalId?.trim();
-  return trimmed ? trimmed : null;
+  if (!trimmed) return null;
+  return isManualOrImportSource(sourceKey) ? trimmed.toLowerCase() : trimmed;
+}
+
+function isManualOrImportSource(sourceKey: string): boolean {
+  return sourceKey === 'manual' || sourceKey.includes('import');
 }

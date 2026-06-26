@@ -36,4 +36,29 @@ describe('capture score structure', () => {
       })
     ).toThrow(ScoreError);
   });
+
+  it('rejects non-finite score factors', () => {
+    expect(() =>
+      assertValidScoreResult({
+        score: 0,
+        scoreVersion: 'bad',
+        scoreFactors: {
+          version: 'bad',
+          factors: [{ key: 'bad', points: Number.NaN, max: 100, reason: 'bad' }]
+        },
+        highlights: []
+      })
+    ).toThrow(ScoreError);
+  });
+
+  it('rejects unsupported highlights', () => {
+    expect(() =>
+      assertValidScoreResult({
+        score: 0,
+        scoreVersion: 'bad',
+        scoreFactors: { version: 'bad', factors: [] },
+        highlights: ['unsupported_highlight']
+      })
+    ).toThrow(ScoreError);
+  });
 });

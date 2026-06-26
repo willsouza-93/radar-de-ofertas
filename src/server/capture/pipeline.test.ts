@@ -43,4 +43,19 @@ describe('capture pipeline', () => {
       expect(item.normalizedOffer.dedupeKey).toBe('manual_import:external:offer-123');
     }
   });
+
+  it('isolates connector/context mismatches as invalid items', () => {
+    const context = createTestCaptureContext();
+    const { result } = createCapturePipeline().process(
+      [createTestRawOffer({ connectorId: 'other-connector' })],
+      context
+    );
+
+    expect(result.processed).toBe(0);
+    expect(result.invalid).toBe(1);
+    expect(result.items[0]?.status).toBe('invalid');
+    if (result.items[0]?.status === 'invalid') {
+      expect(result.items[0].errorCode).toBe('CAPTURE_VALIDATION_FAILED');
+    }
+  });
 });

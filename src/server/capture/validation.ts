@@ -1,5 +1,5 @@
 import { ValidationError } from './errors';
-import type { NormalizedOffer, RawOffer } from './types';
+import type { CaptureContext, NormalizedOffer, RawOffer } from './types';
 
 export interface ValidationIssue {
   field: string;
@@ -7,7 +7,7 @@ export interface ValidationIssue {
   safeMessage: string;
 }
 
-export function validateRawOffer(rawOffer: RawOffer): void {
+export function validateRawOffer(rawOffer: RawOffer, context?: CaptureContext): void {
   const issues: ValidationIssue[] = [];
 
   if (rawOffer.contractVersion !== 'capture-v1') {
@@ -31,6 +31,22 @@ export function validateRawOffer(rawOffer: RawOffer): void {
       field: 'connectorVersion',
       code: 'CONNECTOR_VERSION_REQUIRED',
       safeMessage: 'Versao do conector obrigatoria.'
+    });
+  }
+
+  if (context && rawOffer.connectorId !== context.connectorId) {
+    issues.push({
+      field: 'connectorId',
+      code: 'CONNECTOR_CONTEXT_MISMATCH',
+      safeMessage: 'Conector do item nao corresponde ao contexto de captura.'
+    });
+  }
+
+  if (context && rawOffer.connectorVersion !== context.connectorVersion) {
+    issues.push({
+      field: 'connectorVersion',
+      code: 'CONNECTOR_VERSION_CONTEXT_MISMATCH',
+      safeMessage: 'Versao do conector nao corresponde ao contexto de captura.'
     });
   }
 
@@ -72,6 +88,14 @@ export function validateNormalizedOffer(offer: NormalizedOffer): void {
     });
   }
 
+  if (offer.title.trim().length > 500) {
+    issues.push({
+      field: 'title',
+      code: 'TITLE_TOO_LONG',
+      safeMessage: 'Titulo deve ter no maximo 500 caracteres.'
+    });
+  }
+
   if (offer.currentPrice < 0) {
     issues.push({
       field: 'currentPrice',
@@ -104,6 +128,14 @@ export function validateNormalizedOffer(offer: NormalizedOffer): void {
         safeMessage: 'Desconto deve estar entre 0 e 100.'
       });
     }
+  }
+
+  if (offer.couponCode && offer.couponCode.length > 80) {
+    issues.push({
+      field: 'couponCode',
+      code: 'COUPON_CODE_TOO_LONG',
+      safeMessage: 'Cupom deve ter no maximo 80 caracteres.'
+    });
   }
 
   if (!offer.dedupeKey.trim()) {

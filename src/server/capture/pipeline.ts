@@ -71,7 +71,7 @@ export class CapturePipeline {
     context: CaptureContext
   ): PipelineItemResult {
     try {
-      validateRawOffer(rawOffer);
+      validateRawOffer(rawOffer, context);
       const draft = normalizeRawOffer(rawOffer, context);
       const normalizedOffer = finalizeNormalizedOffer(draft);
       validateNormalizedOffer(normalizedOffer);
@@ -131,6 +131,7 @@ function finalizeNormalizedOffer(draft: NormalizedOfferDraft): NormalizedOffer {
     couponCode: draft.couponCode,
     freeShipping: draft.freeShipping,
     commissionPercent: draft.commissionPercent,
-    sellerKey: draft.sellerKey
+    sellerKey: draft.sellerKey,
+    availability: draft.availability
   };
 }

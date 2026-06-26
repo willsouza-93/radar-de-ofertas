@@ -2,6 +2,12 @@ import { ScoreError } from './errors';
 import type { CaptureContext, NormalizedOffer, ScoreBreakdown, ScoreFactor, ScoreResult } from './types';
 
 export const CAPTURE_SCORE_VERSION = 'capture-structure-v1' as const;
+const ALLOWED_HIGHLIGHTS = new Set([
+  'lowest_price',
+  'coupon',
+  'free_shipping',
+  'high_commission'
+]);
 
 export interface ScoreCalculationContext {
   captureContext: CaptureContext;
@@ -52,11 +58,27 @@ export function assertValidScoreResult(result: ScoreResult): void {
   }
 
   for (const factor of result.scoreFactors.factors) {
-    if (factor.points < 0 || factor.max < 0 || factor.points > factor.max) {
+    if (
+      !Number.isFinite(factor.points) ||
+      !Number.isFinite(factor.max) ||
+      factor.points < 0 ||
+      factor.max < 0 ||
+      factor.points > factor.max
+    ) {
       throw new ScoreError('Invalid score factor.', {
         code: 'INVALID_SCORE_FACTOR',
         safeMessage: 'Fator de score invalido.',
         details: { factor }
+      });
+    }
+  }
+
+  for (const highlight of result.highlights) {
+    if (!ALLOWED_HIGHLIGHTS.has(highlight)) {
+      throw new ScoreError('Invalid score highlight.', {
+        code: 'INVALID_SCORE_HIGHLIGHT',
+        safeMessage: 'Highlight de score invalido.',
+        details: { highlight }
       });
     }
   }

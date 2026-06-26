@@ -85,7 +85,7 @@ Resumo observado:
 
 ```text
 Test Files  13 passed (13)
-Tests       79 passed (79)
+Tests       89 passed (89)
 ```
 
 ### Build
@@ -128,6 +128,15 @@ Resultado: passou.
   - raw capture sem `affiliateUrl`;
   - normalized offer com `affiliateUrl = null`;
   - dedupe independente de `affiliateUrl`.
+- Architecture conformance review:
+  - external IDs manuais/import normalizados;
+  - flags numericas de frete invalidas rejeitadas;
+  - disponibilidade considerada na reentrada editorial;
+  - mismatch conector/contexto isolado como item invalido;
+  - preco com precisao ou teto incompativeis com `numeric(12,2)` rejeitado;
+  - limite de titulo e cupom alinhados ao schema persistido;
+  - score factors e highlights invalidos rejeitados;
+  - `capturedAt` exige ISO UTC valido.
 - Deduplication:
   - external ID;
   - URL hash fallback;

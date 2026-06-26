@@ -22,6 +22,19 @@ describe('capture deduplication', () => {
     });
   });
 
+  it('normalizes manual/import external ids before keying', () => {
+    expect(
+      calculateDedupeKey({
+        sourceKey: 'manual_import',
+        externalId: ' Produto-ABC ',
+        canonicalSourceUrl: 'https://example.com/p/123'
+      })
+    ).toEqual({
+      externalId: 'produto-abc',
+      dedupeKey: 'manual_import:external:produto-abc'
+    });
+  });
+
   it('falls back to canonical URL hash when external id is absent', () => {
     const result = calculateDedupeKey({
       sourceKey: 'manual',
@@ -49,9 +62,10 @@ describe('capture deduplication', () => {
       detectMaterialChanges(offer, {
         currentPrice: 99.9,
         couponCode: null,
-        freeShipping: false
+        freeShipping: false,
+        availability: 'out_of_stock'
       })
-    ).toEqual(['price', 'discount', 'coupon', 'shipping']);
+    ).toEqual(['price', 'discount', 'coupon', 'shipping', 'availability']);
   });
 
   it('allows editorial re-entry after the 24h cooldown', () => {

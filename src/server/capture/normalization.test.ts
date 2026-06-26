@@ -61,4 +61,29 @@ describe('capture normalization', () => {
     expect(parseShippingFlag('free')).toBe(true);
     expect(parseShippingFlag('0')).toBe(false);
   });
+
+  it('rejects numeric prices with more than two decimal places', () => {
+    expect(() => parseMoney(19.999, 'currentPrice')).toThrow('Invalid money precision');
+  });
+
+  it('rejects prices outside numeric(12,2)', () => {
+    expect(() => parseMoney(10000000000, 'currentPrice')).toThrow('Money value exceeds');
+  });
+
+  it('rejects invalid numeric shipping flags', () => {
+    expect(() => parseShippingFlag(2)).toThrow('Invalid shipping flag');
+  });
+
+  it('rejects non-ISO or calendar-invalid capture timestamps', () => {
+    expect(() =>
+      normalizeRawOffer(createTestRawOffer({ capturedAt: '0' }), createTestCaptureContext())
+    ).toThrow('Invalid ISO date');
+
+    expect(() =>
+      normalizeRawOffer(
+        createTestRawOffer({ capturedAt: '2026-02-30T12:00:00Z' }),
+        createTestCaptureContext()
+      )
+    ).toThrow('Invalid ISO date');
+  });
 });

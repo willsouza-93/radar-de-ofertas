@@ -46,6 +46,7 @@ export interface NormalizedOfferDraft {
   freeShipping: boolean;
   commissionPercent: number | null;
   sellerKey: string | null;
+  availability: string | null;
 }
 
 export function normalizeRawOffer(rawOffer: RawOffer, context: CaptureContext): NormalizedOfferDraft {
@@ -78,7 +79,8 @@ export function normalizeRawOffer(rawOffer: RawOffer, context: CaptureContext): 
     couponCode: trimToNull(rawOffer.couponCode),
     freeShipping: parseShippingFlag(rawOffer.freeShipping),
     commissionPercent: parsePercent(rawOffer.commissionPercent, 'commissionPercent'),
-    sellerKey: normalizeSellerKey(rawOffer.sellerId ?? rawOffer.sellerName)
+    sellerKey: normalizeSellerKey(rawOffer.sellerId ?? rawOffer.sellerName),
+    availability: normalizeAvailability(rawOffer.availability)
   };
 }
 
@@ -129,8 +131,27 @@ export function assertHttpUrl(rawUrl: string, fieldName: string): string {
 }
 
 export function parseMoney(value: string | number, fieldName: string): number {
-  const normalized =
-    typeof value === 'number' ? value.toFixed(2) : value.trim().replace(',', '.');
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || value < 0) {
+      throw new NormalizationError('Invalid money value.', {
+        code: 'INVALID_MONEY',
+        safeMessage: 'Informe um valor monetario positivo.',
+        details: { fieldName }
+      });
+    }
+
+    if (!hasAtMostTwoDecimalPlaces(value)) {
+      throw new NormalizationError('Invalid money precision.', {
+        code: 'INVALID_MONEY_PRECISION',
+        safeMessage: 'Informe um valor monetario com ate duas casas decimais.',
+        details: { fieldName }
+      });
+    }
+
+    return assertMoneyRange(value, fieldName);
+  }
+
+  const normalized = value.trim().replace(',', '.');
 
   if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) {
     throw new NormalizationError('Invalid money value.', {
@@ -149,7 +170,7 @@ export function parseMoney(value: string | number, fieldName: string): number {
     });
   }
 
-  return roundCurrency(parsed);
+  return assertMoneyRange(parsed, fieldName);
 }
 
 export function parsePercent(
@@ -204,7 +225,15 @@ export function normalizeCurrency(value: string | null | undefined): Currency {
 export function parseShippingFlag(value: boolean | string | number | null | undefined): boolean {
   if (value === null || value === undefined || value === '') return false;
   if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value === 1;
+  if (typeof value === 'number') {
+    if (value === 1) return true;
+    if (value === 0) return false;
+    throw new NormalizationError('Invalid shipping flag.', {
+      code: 'INVALID_SHIPPING_FLAG',
+      safeMessage: 'Informe um valor valido para frete gratis.',
+      details: { value }
+    });
+  }
 
   const normalized = value.trim().toLowerCase();
   if (['true', '1', 'yes', 'sim', 'gratis', 'free'].includes(normalized)) return true;
@@ -228,6 +257,15 @@ function normalizeTitle(title: string): string {
 }
 
 function normalizeIsoDate(value: string, fieldName: string): string {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.(\d{1,3}))?Z$/.exec(value);
+  if (!match) {
+    throw new NormalizationError('Invalid ISO date.', {
+      code: 'INVALID_ISO_DATE',
+      safeMessage: 'Informe uma data ISO valida em UTC.',
+      details: { fieldName }
+    });
+  }
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     throw new NormalizationError('Invalid date.', {
@@ -236,6 +274,17 @@ function normalizeIsoDate(value: string, fieldName: string): string {
       details: { fieldName }
     });
   }
+
+  const milliseconds = (match[3] ?? '0').padEnd(3, '0');
+  const canonical = `${match[1]}T${match[2]}.${milliseconds}Z`;
+  if (date.toISOString() !== canonical) {
+    throw new NormalizationError('Invalid ISO date.', {
+      code: 'INVALID_ISO_DATE',
+      safeMessage: 'Informe uma data ISO valida em UTC.',
+      details: { fieldName }
+    });
+  }
+
   return date.toISOString();
 }
 
@@ -252,6 +301,11 @@ function normalizeSourceKey(sourceKey: string): string {
 }
 
 function normalizeSellerKey(value: string | null | undefined): string | null {
+  const trimmed = trimToNull(value);
+  return trimmed ? trimmed.toLowerCase() : null;
+}
+
+function normalizeAvailability(value: string | null | undefined): string | null {
   const trimmed = trimToNull(value);
   return trimmed ? trimmed.toLowerCase() : null;
 }
@@ -299,4 +353,21 @@ function roundCurrency(value: number): number {
 
 function roundPercent(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function hasAtMostTwoDecimalPlaces(value: number): boolean {
+  return Math.abs(Math.round(value * 100) - value * 100) < 1e-9;
+}
+
+function assertMoneyRange(value: number, fieldName: string): number {
+  const maxNumeric12_2 = 9999999999.99;
+  if (value > maxNumeric12_2) {
+    throw new NormalizationError('Money value exceeds numeric(12,2).', {
+      code: 'MONEY_OUT_OF_RANGE',
+      safeMessage: 'Valor monetario excede o limite suportado.',
+      details: { fieldName }
+    });
+  }
+
+  return roundCurrency(value);
 }
