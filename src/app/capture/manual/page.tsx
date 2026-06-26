@@ -59,7 +59,7 @@ export default function ManualCapturePage({
             <PageHeader
               eyebrow="Captura"
               title="Importacao manual"
-              description="Cole um JSON estruturado para validar o connector manual, pipeline de captura e persistencia local."
+              description="Cole um JSON estruturado para validar o connector manual, pipeline de captura e persistencia em ofertas."
               action={<Button as={Link} href="/offers" variant="secondary">Ver ofertas</Button>}
             />
 
@@ -74,7 +74,7 @@ export default function ManualCapturePage({
                 </div>
                 <Field
                   label="Payload"
-                  helper="Use records[]. sourceUrl e currentPrice sao obrigatorios. affiliateUrl e opcional no dominio, mas o schema atual de offers exige affiliateUrl para persistir novas ofertas."
+                  helper="Use records[]. sourceUrl e currentPrice sao obrigatorios. Enquanto offers.affiliate_url for obrigatorio no banco, informe affiliateUrl para persistir novas ofertas."
                 >
                   <Textarea
                     name="payload"
@@ -100,11 +100,16 @@ export default function ManualCapturePage({
                     <Metric label="Recebidas" value={result.received} />
                     <Metric label="Persistidas" value={result.persisted} />
                     <Metric label="Invalidas" value={result.invalid} />
-                    <Metric label="Fila criada" value={result.queueCreated} />
-                    <Metric label="Reentrada solicitada" value={result.queueReentered} />
-                    <Metric label="Fila ignorada/bloqueada" value={result.queueSkipped} />
+                    <Metric label="Entraram na curadoria" value={String(Number(result.queueCreated) + Number(result.queueReentered))} />
+                    <Metric label="Nao entraram na curadoria" value={result.queueSkipped} />
                     <Metric label="Avisos" value={result.warnings} />
                     <p className="helper">Run: {result.run}</p>
+                    {Number(result.queueSkipped) > 0 ? (
+                      <p className="helper" role="status">
+                        Algumas ofertas foram salvas, mas nao entraram na curadoria porque a fila exige
+                        uma RPC controlada futura. Revise a lista de ofertas enquanto essa superficie nao existe.
+                      </p>
+                    ) : null}
                   </div>
                 ) : result.kind === 'error' ? (
                   <ErrorState
@@ -119,9 +124,8 @@ export default function ManualCapturePage({
 
                 <div className="section-spaced">
                   <p className="helper">
-                    Observacao: a criacao/reentrada de `approval_queue` respeita os grants atuais.
-                    Como a curadoria foi endurecida, ambientes sem funcao controlada podem persistir
-                    ofertas e snapshots sem materializar nova fila.
+                    Observacao: esta tela nao usa service role nem tenta insert/update direto em
+                    `approval_queue`. A criacao ou reentrada de curadoria depende de uma RPC segura futura.
                   </p>
                 </div>
               </aside>

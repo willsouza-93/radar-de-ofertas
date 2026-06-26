@@ -178,7 +178,8 @@ Fluxo implementado:
 
 ### Curadoria
 
-- O adapter tenta criar `approval_queue.pending` para novas oportunidades.
+- O adapter avalia quando uma oportunidade deveria entrar ou voltar para
+  curadoria.
 - A Fase 3B endureceu a curadoria:
   - clientes autenticados nao possuem grant para inserir/atualizar
     `approval_queue`;
@@ -186,6 +187,8 @@ Fluxo implementado:
   - transicoes oficiais permanecem protegidas por `apply_approval_decision`.
 - Por isso, sem migration/RPC nova, ambientes atuais podem persistir
   `offers` e `price_snapshots`, mas bloquear materializacao/reentrada da fila.
+- O repositório Supabase da Fase 5C nao tenta `insert`/`update` direto em
+  `approval_queue`; ele retorna aviso operacional ate existir RPC segura.
 - Essa limitacao foi documentada em vez de contornar RLS com service role.
 
 ### Observabilidade
@@ -234,6 +237,9 @@ Fluxo implementado:
 
 - A fila de curadoria pode nao ser criada automaticamente enquanto nao existir
   uma superficie segura aprovada para materializar `approval_queue`.
+- Portanto, a Fase 5C prova `Manual input -> RawOffer -> Pipeline ->
+  offers/snapshots`, mas ainda nao prova ponta a ponta ate a curadoria no
+  Supabase real.
 - Novas capturas sem `affiliateUrl` precisam de enriquecimento antes de
   persistir em `offers`.
 - O score da captura ainda e estrutural (`capture-structure-v1`), nao o score

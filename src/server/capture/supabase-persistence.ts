@@ -170,22 +170,18 @@ export class SupabaseCapturePersistenceRepository implements CapturePersistenceR
     offerId: string;
     priorityScore: number;
   }): Promise<{ id: string }> {
-    const { data, error } = await this.supabase
-      .from('approval_queue')
-      .insert({
-        workspace_id: input.workspaceId,
-        offer_id: input.offerId,
-        status: 'pending',
-        priority_score: input.priorityScore
-      })
-      .select('id')
-      .single();
-
-    if (error) throw new Error(error.message);
-    return { id: (data as { id: string }).id };
+    void input;
+    throw new Error(
+      'Materializacao de approval_queue exige RPC controlada; insert direto permanece bloqueado.'
+    );
   }
 
-  async reopenApprovalQueue(): Promise<{ id: string }> {
+  async reopenApprovalQueue(input?: {
+    workspaceId: string;
+    offerId: string;
+    priorityScore: number;
+  }): Promise<{ id: string }> {
+    void input;
     throw new Error(
       'Reentrada editorial em fila terminal exige funcao controlada no banco; update direto de approval_queue permanece bloqueado.'
     );
