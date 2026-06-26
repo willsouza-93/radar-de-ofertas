@@ -1,0 +1,108 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  EditorialCooldownPolicy,
+  calculateDedupeKey,
+  detectMaterialChanges
+} from './deduplication';
+import { normalizeRawOffer } from './normalization';
+import { createTestCaptureContext, createTestRawOffer, finalizeTestOffer } from './test-helpers';
+
+describe('capture deduplication', () => {
+  it('uses external identity before URL hash', () => {
+    const result = calculateDedupeKey({
+      sourceKey: 'mercado_livre',
+      externalId: 'MLB123',
+      canonicalSourceUrl: 'https://example.com/p/123'
+    });
+
+    expect(result).toEqual({
+      externalId: 'MLB123',
+      dedupeKey: 'mercado_livre:external:MLB123'
+    });
+  });
+
+  it('falls back to canonical URL hash when external id is absent', () => {
+    const result = calculateDedupeKey({
+      sourceKey: 'manual',
+      externalId: null,
+      canonicalSourceUrl: 'https://example.com/p/123'
+    });
+
+    expect(result.externalId).toMatch(/^url:[a-f0-9]{64}$/);
+    expect(result.dedupeKey).toBe(`manual:url:${result.externalId.replace('url:', '')}`);
+  });
+
+  it('detects material changes for editorial re-entry', () => {
+    const offer = finalizeTestOffer(
+      normalizeRawOffer(
+        createTestRawOffer({
+          currentPrice: 79.9,
+          couponCode: 'VOLTOU',
+          freeShipping: true
+        }),
+        createTestCaptureContext()
+      )
+    );
+
+    expect(
+      detectMaterialChanges(offer, {
+        currentPrice: 99.9,
+        couponCode: null,
+        freeShipping: false
+      })
+    ).toEqual(['price', 'discount', 'coupon', 'shipping']);
+  });
+
+  it('allows editorial re-entry after the 24h cooldown', () => {
+    const policy = new EditorialCooldownPolicy();
+    const offer = finalizeTestOffer(
+      normalizeRawOffer(
+        createTestRawOffer({ capturedAt: '2026-06-26T12:00:00.000Z' }),
+        createTestCaptureContext()
+      )
+    );
+
+    expect(
+      policy.evaluate({
+        offer,
+        existing: {
+          currentPrice: offer.currentPrice,
+          discountPercent: offer.discountPercent ?? null,
+          couponCode: offer.couponCode ?? null,
+          freeShipping: offer.freeShipping ?? false,
+          commissionPercent: offer.commissionPercent ?? null,
+          sellerKey: offer.sellerKey ?? null,
+          lastEditorialReviewAt: '2026-06-25T11:59:59.000Z'
+        },
+        observedAt: '2026-06-26T12:00:00.000Z'
+      })
+    ).toMatchObject({ shouldReenter: true, reason: 'cooldown_elapsed', cooldownHours: 24 });
+  });
+
+  it('blocks editorial re-entry before cooldown when nothing changed', () => {
+    const policy = new EditorialCooldownPolicy();
+    const offer = finalizeTestOffer(
+      normalizeRawOffer(
+        createTestRawOffer({ capturedAt: '2026-06-26T12:00:00.000Z' }),
+        createTestCaptureContext()
+      )
+    );
+
+    expect(
+      policy.evaluate({
+        offer,
+        existing: {
+          currentPrice: offer.currentPrice,
+          discountPercent: offer.discountPercent ?? null,
+          couponCode: offer.couponCode ?? null,
+          freeShipping: offer.freeShipping ?? false,
+          commissionPercent: offer.commissionPercent ?? null,
+          sellerKey: offer.sellerKey ?? null,
+          lastEditorialReviewAt: '2026-06-26T00:00:00.000Z'
+        },
+        observedAt: '2026-06-26T12:00:00.000Z'
+      })
+    ).toMatchObject({ shouldReenter: false, reason: 'cooldown_not_elapsed' });
+  });
+});
