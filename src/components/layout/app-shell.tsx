@@ -18,7 +18,10 @@ export function AppShell({
   const navItems = [
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Ofertas', href: '/offers' },
-    { label: 'Curadoria', href: '/curation', count: pendingCount }
+    { label: 'Curadoria', href: '/curation', count: pendingCount },
+    ...(session.user.role === 'admin'
+      ? [{ label: 'Importar', href: '/capture/manual' }]
+      : [])
   ];
 
   return (

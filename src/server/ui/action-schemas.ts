@@ -29,3 +29,9 @@ export const rejectActionSchema = z
     reason: z.string().trim().min(3).max(2000)
   })
   .strict();
+
+export const manualImportActionSchema = z
+  .object({
+    payload: z.string().trim().min(2).max(200_000)
+  })
+  .strict();
