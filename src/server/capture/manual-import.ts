@@ -80,11 +80,17 @@ export interface CapturePersistenceRepository extends MembershipRepository {
     workspaceId: string;
     offerId: string;
     priorityScore: number;
+    reentryReason: EditorialCooldownDecision['reason'];
+    captureRunId: string;
+    correlationId: string;
   }): Promise<{ id: string }>;
   reopenApprovalQueue(input: {
     workspaceId: string;
     offerId: string;
     priorityScore: number;
+    reentryReason: EditorialCooldownDecision['reason'];
+    captureRunId: string;
+    correlationId: string;
   }): Promise<{ id: string }>;
 }
 
@@ -179,7 +185,9 @@ export async function importManualOffers(
       workspaceId: membership.workspaceId,
       actorUserId: membership.userId,
       repository: context.repository,
-      observedAt: item.normalizedOffer.capturedAt
+      observedAt: item.normalizedOffer.capturedAt,
+      captureRunId,
+      correlationId
     }).catch((error: unknown) => {
       result.failures.push({
         rawIndex: item.rawIndex,
@@ -234,6 +242,8 @@ async function persistScoredOffer(
     actorUserId: string;
     repository: CapturePersistenceRepository;
     observedAt: string;
+    captureRunId: string;
+    correlationId: string;
   }
 ): Promise<CapturePersistenceResult> {
   const existing = await args.repository.findOfferByDedupeKey(
@@ -303,7 +313,10 @@ async function persistScoredOffer(
     const queueInput = {
       workspaceId: args.workspaceId,
       offerId: offer.id,
-      priorityScore: scoredOffer.score
+      priorityScore: scoredOffer.score,
+      reentryReason: editorialDecision.reason,
+      captureRunId: args.captureRunId,
+      correlationId: args.correlationId
     };
     if (!currentQueue) {
       await args.repository.createApprovalQueue(queueInput);

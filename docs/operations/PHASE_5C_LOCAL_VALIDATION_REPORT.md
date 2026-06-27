@@ -145,12 +145,12 @@ Regras obrigatorias da RPC:
 - Dados reais sem `affiliateUrl` precisam de enriquecimento antes de aparecer
   em `offers`.
 
-## Recomendacao
+## Resolucao posterior
 
-Antes de aplicar em staging, revisar se a proxima fase deve criar uma funcao
-controlada para:
+A Fase 5C.1 implementa a RPC segura `submit_capture_for_review(...)` para:
 
 - criar `approval_queue.pending` a partir de captura;
+- retornar fila pendente existente sem duplicar curadoria;
 - reabrir oportunidade editorial terminal quando cooldown ou mudanca material
   permitirem;
 - preservar trilha de auditoria sem permitir update direto de status.

@@ -32,6 +32,11 @@ type QueueRow = {
   last_reviewed_at: string | null;
 };
 
+type SubmitCaptureForReviewRow = {
+  queue_id: string;
+  action: 'created' | 'already_pending' | 'reopened' | 'not_reentered';
+};
+
 export class SupabaseCapturePersistenceRepository implements CapturePersistenceRepository {
   constructor(private readonly supabase: SupabaseServerClient) {}
 
@@ -169,22 +174,48 @@ export class SupabaseCapturePersistenceRepository implements CapturePersistenceR
     workspaceId: string;
     offerId: string;
     priorityScore: number;
+    reentryReason: string;
+    captureRunId: string;
+    correlationId: string;
   }): Promise<{ id: string }> {
-    void input;
-    throw new Error(
-      'Materializacao de approval_queue exige RPC controlada; insert direto permanece bloqueado.'
-    );
+    return this.submitCaptureForReview(input);
   }
 
-  async reopenApprovalQueue(input?: {
+  async reopenApprovalQueue(input: {
     workspaceId: string;
     offerId: string;
     priorityScore: number;
+    reentryReason: string;
+    captureRunId: string;
+    correlationId: string;
   }): Promise<{ id: string }> {
-    void input;
-    throw new Error(
-      'Reentrada editorial em fila terminal exige funcao controlada no banco; update direto de approval_queue permanece bloqueado.'
-    );
+    return this.submitCaptureForReview(input);
+  }
+
+  private async submitCaptureForReview(input: {
+    workspaceId: string;
+    offerId: string;
+    priorityScore: number;
+    reentryReason: string;
+    captureRunId: string;
+    correlationId: string;
+  }): Promise<{ id: string }> {
+    void input.workspaceId;
+    const { data, error } = await this.supabase.rpc('submit_capture_for_review', {
+      target_offer_id: input.offerId,
+      target_priority_score: input.priorityScore,
+      target_reentry_reason: input.reentryReason,
+      target_capture_run_id: input.captureRunId,
+      target_correlation_id: input.correlationId
+    });
+
+    if (error) throw new Error(error.message);
+    const row = Array.isArray(data) ? data[0] as SubmitCaptureForReviewRow | undefined : undefined;
+    if (!row) throw new Error('RPC submit_capture_for_review nao retornou fila.');
+    if (row.action === 'not_reentered') {
+      throw new Error('Oferta nao atende criterios de reentrada editorial.');
+    }
+    return { id: row.queue_id };
   }
 }
 

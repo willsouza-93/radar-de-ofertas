@@ -46,6 +46,24 @@ describe('importManualOffers', () => {
     expect(repository.queues).toHaveLength(1);
   });
 
+  it('keeps one pending queue and creates snapshots for repeated material captures', async () => {
+    const repository = new InMemoryCaptureRepository();
+    await importManualOffers(buildPayload(), buildContext(repository, '2026-06-26T10:00:00.000Z'));
+
+    const result = await importManualOffers(
+      buildPayload({ currentPrice: '3799.90' }),
+      buildContext(repository, '2026-06-26T11:00:00.000Z')
+    );
+
+    expect(result.persisted).toBe(1);
+    expect(result.updatedOffers).toBe(1);
+    expect(result.snapshotsCreated).toBe(1);
+    expect(result.queueCreated).toBe(0);
+    expect(result.queueSkipped).toBe(1);
+    expect(repository.queues).toHaveLength(1);
+    expect(repository.snapshots).toHaveLength(2);
+  });
+
   it('allows editorial re-entry after the 24 hour cooldown', async () => {
     const repository = new InMemoryCaptureRepository();
     await importManualOffers(buildPayload(), buildContext(repository, '2026-06-26T10:00:00.000Z'));
