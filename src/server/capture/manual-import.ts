@@ -372,6 +372,9 @@ function resolveReviewSubmissionReason(
 }
 
 function hasPersistedMaterialChange(editorialDecision: EditorialCooldownDecision): boolean {
+  // Commission is editorially relevant, but the current schema does not persist
+  // commission history in price_snapshots. Until it does, it cannot safely bypass
+  // cooldown through the DB-side material-change guard.
   return editorialDecision.materialChanges.some((change) =>
     change === 'price' ||
     change === 'discount' ||

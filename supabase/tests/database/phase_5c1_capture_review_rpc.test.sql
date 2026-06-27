@@ -73,6 +73,23 @@ values
     '{"version":"capture-structure-v1","factors":[]}'::jsonb,
     '10000000-0000-0000-0000-000000000001',
     '10000000-0000-0000-0000-000000000001'
+  ),
+  (
+    '41000000-0000-0000-0000-000000005104',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'manual',
+    'phase-5c1-stale-material',
+    'manual:external:phase-5c1-stale-material',
+    'https://example.test/phase-5c1-stale-material',
+    'https://affiliate.example.test/phase-5c1-stale-material',
+    'Oferta aprovada com snapshot material antigo',
+    159.90,
+    'BRL',
+    72,
+    'capture-structure-v1',
+    '{"version":"capture-structure-v1","factors":[]}'::jsonb,
+    '10000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000001'
   )
 on conflict (id) do nothing;
 
@@ -101,6 +118,15 @@ values
     '41000000-0000-0000-0000-000000005103',
     'pending',
     66,
+    '2026-06-25T10:00:00Z',
+    '2026-06-25T10:00:00Z'
+  ),
+  (
+    '51000000-0000-0000-0000-000000005104',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '41000000-0000-0000-0000-000000005104',
+    'pending',
+    72,
     '2026-06-25T10:00:00Z',
     '2026-06-25T10:00:00Z'
   )
@@ -145,6 +171,19 @@ values
     '10000000-0000-0000-0000-000000000001',
     '2026-06-25T10:30:00Z',
     '2026-06-25T10:30:00Z'
+  ),
+  (
+    '61000000-0000-0000-0000-000000005104',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '51000000-0000-0000-0000-000000005104',
+    '41000000-0000-0000-0000-000000005104',
+    'approved',
+    'pending',
+    'approved',
+    null,
+    '10000000-0000-0000-0000-000000000001',
+    '2026-06-27T12:00:00Z',
+    '2026-06-27T12:00:00Z'
   )
 on conflict (id) do nothing;
 
@@ -165,6 +204,15 @@ set
   last_reviewed_at = '2026-06-25T10:30:00Z',
   updated_at = '2026-06-25T10:30:00Z'
 where id = '51000000-0000-0000-0000-000000005103';
+
+update public.approval_queue
+set
+  status = 'approved',
+  last_decision_id = '61000000-0000-0000-0000-000000005104',
+  last_reviewed_by = '10000000-0000-0000-0000-000000000001',
+  last_reviewed_at = '2026-06-27T12:00:00Z',
+  updated_at = '2026-06-27T12:00:00Z'
+where id = '51000000-0000-0000-0000-000000005104';
 
 insert into public.price_snapshots (
   workspace_id,
@@ -193,6 +241,26 @@ values
     89.90,
     129.90,
     30.79,
+    null,
+    false,
+    '2026-06-27T10:00:00Z'
+  ),
+  (
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '41000000-0000-0000-0000-000000005104',
+    179.90,
+    199.90,
+    10.00,
+    null,
+    false,
+    '2026-06-26T10:00:00Z'
+  ),
+  (
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '41000000-0000-0000-0000-000000005104',
+    159.90,
+    199.90,
+    20.01,
     null,
     false,
     '2026-06-27T10:00:00Z'
@@ -302,6 +370,32 @@ select results_eq(
     )$$,
   $$values ('approved'::text, false, 'not_reentered'::text)$$,
   'Terminal queue does not trust material_change without persisted snapshot evidence'
+);
+
+select results_eq(
+  $$select queue_status::text, submitted, action
+    from public.submit_capture_for_review(
+      '41000000-0000-0000-0000-000000005102',
+      78,
+      null,
+      'capture-run-missing-reason',
+      'correlation-missing-reason'
+    )$$,
+  $$values ('approved'::text, false, 'not_reentered'::text)$$,
+  'Terminal queue does not reopen when reentry reason is missing'
+);
+
+select results_eq(
+  $$select queue_status::text, submitted, action
+    from public.submit_capture_for_review(
+      '41000000-0000-0000-0000-000000005104',
+      72,
+      'material_change',
+      'capture-run-stale-material',
+      'correlation-stale-material'
+    )$$,
+  $$values ('approved'::text, false, 'not_reentered'::text)$$,
+  'Terminal queue requires material snapshot evidence after the last review'
 );
 
 select results_eq(

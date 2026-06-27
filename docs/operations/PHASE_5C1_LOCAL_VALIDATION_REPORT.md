@@ -45,6 +45,11 @@ partir de captura.
 - Captura repetida de oferta pendente nao cria nova `approval_queue`.
 - Captura nao cria `approval_decisions`.
 - Reentrada de fila terminal exige `material_change` ou `cooldown_elapsed`.
+- Fila terminal sem motivo explicito de reentrada retorna `not_reentered`.
+- `material_change` exige evidencia persistida em `price_snapshots` observada
+  depois da ultima revisao editorial.
+- Mudanca isolada de comissao nao reabre antes do cooldown enquanto o schema
+  atual nao guardar historico persistido de comissao.
 - Toda materializacao/reentrada registra nota operacional com `captureRunId` e
   `correlationId`.
 
@@ -68,6 +73,9 @@ partir de captura.
 | Oferta aprovada sem cooldown | Retorna terminal existente, sem reentrada |
 | Oferta aprovada com cooldown | Reabre fila como `pending` |
 | Oferta rejeitada com mudanca material | Reabre fila como `pending` |
+| Oferta terminal sem motivo | Retorna terminal existente, sem reentrada |
+| Mudanca material antiga | Retorna terminal existente, sem reentrada |
+| Mudanca apenas de comissao antes do cooldown | Retorna terminal existente, sem reentrada |
 | Editor | `42501` |
 | Suspenso | `42501` |
 | Outro workspace | `42501` |
@@ -89,6 +97,8 @@ Cobertura:
 - repeticao nao duplica;
 - cooldown editorial;
 - mudanca material;
+- motivo de reentrada ausente;
+- evidencia material anterior a ultima revisao;
 - bloqueios de permissao;
 - ausencia de `approval_decisions` automaticas.
 
@@ -98,7 +108,9 @@ Cobertura:
 
 - `SupabaseCapturePersistenceRepository` chama RPC;
 - reentrada usa a mesma RPC;
-- captura repetida com mudanca material cria snapshot e mantem uma fila.
+- captura repetida com mudanca material cria snapshot e mantem uma fila;
+- comissao isolada nao reabre fila terminal antes do cooldown sem evidencia
+  persistida especifica.
 
 ## Seguranca
 
@@ -123,10 +135,10 @@ Executado em 2026-06-27:
 
 | Comando | Resultado |
 | --- | --- |
-| `npx.cmd supabase db reset` | Migrations e seed aplicados; comando retornou non-zero por healthcheck auxiliar do Storage no Windows |
-| `npx.cmd supabase test db` | PASS - 4 arquivos, 128 testes pgTAP |
+| `npx.cmd supabase db reset` | PASS |
+| `npx.cmd supabase test db` | PASS - 4 arquivos, 130 testes pgTAP |
 | `npm.cmd run typecheck` | PASS |
-| `npm.cmd test` | PASS - 16 arquivos, 104 testes |
+| `npm.cmd test` | PASS - 16 arquivos, 105 testes |
 | `npm.cmd run build` | PASS |
 | `git diff --check` | PASS |
 | `npx.cmd supabase db advisors --local --type security --fail-on none` | PASS - nenhum achado |

@@ -303,9 +303,14 @@ returns table (
   - `cooldown_elapsed`.
 - A RPC valida `cooldown_elapsed` no banco usando `last_reviewed_at + 24h`.
 - A RPC valida `material_change` por evidencia persistida nos dois ultimos
-  `price_snapshots`, evitando confiar apenas em parametro do cliente.
+  `price_snapshots`, exigindo que o snapshot material mais recente tenha sido
+  observado depois da ultima revisao editorial.
 - O adapter so encaminha `material_change` para mudancas persistidas em
   snapshot: preco, desconto, cupom ou frete.
+- Mudanca isolada de comissao permanece material no conceito editorial, mas nao
+  reabre fila antes do cooldown enquanto o schema atual nao guardar historico
+  persistido de comissao.
+- Fila terminal sem `target_reentry_reason` explicito retorna `not_reentered`.
 - Reentrada controlada limpa ponteiros terminais da fila, mas preserva
   `approval_decisions` e `review_notes`.
 - Toda materializacao/reentrada registra nota operacional com:
@@ -335,6 +340,8 @@ returns table (
   - multiplas submisssoes mantem uma unica fila;
   - oferta aprovada respeita cooldown;
   - oferta rejeitada reentra por mudanca material;
+  - motivo de reentrada ausente bloqueado;
+  - snapshot material anterior a ultima revisao bloqueado;
   - Editor negado;
   - suspenso negado;
   - sem membership negado;
@@ -345,7 +352,9 @@ returns table (
 - Vitest cobre:
   - repository Supabase chamando RPC;
   - reentrada via RPC;
-  - capturas repetidas com uma unica fila pendente e multiplos snapshots.
+  - capturas repetidas com uma unica fila pendente e multiplos snapshots;
+  - mudanca isolada de comissao nao reabre antes do cooldown sem evidencia
+    persistida especifica.
 
 ### Restricoes preservadas
 

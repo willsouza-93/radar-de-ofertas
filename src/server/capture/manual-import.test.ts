@@ -120,6 +120,25 @@ describe('importManualOffers', () => {
     expect(repository.queues[0]?.status).toBe('approved');
   });
 
+  it('does not reopen terminal queue for commission-only changes before persisted evidence exists', async () => {
+    const repository = new InMemoryCaptureRepository();
+    await importManualOffers(buildPayload(), buildContext(repository, '2026-06-26T10:00:00.000Z'));
+    repository.queues[0] = {
+      ...repository.queues[0]!,
+      status: 'approved',
+      lastReviewedAt: '2026-06-26T10:00:00.000Z'
+    };
+
+    const result = await importManualOffers(
+      buildPayload({ commissionPercent: '12.5' }),
+      buildContext(repository, '2026-06-26T12:00:00.000Z')
+    );
+
+    expect(result.queueReentered).toBe(0);
+    expect(result.queueSkipped).toBe(1);
+    expect(repository.queues[0]?.status).toBe('approved');
+  });
+
   it('keeps affiliate-less captures valid in the pipeline but blocks new offer persistence on current schema', async () => {
     const repository = new InMemoryCaptureRepository();
 

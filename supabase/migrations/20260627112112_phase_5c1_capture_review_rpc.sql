@@ -161,7 +161,8 @@ begin
     return;
   end if;
 
-  if normalized_reason not in ('material_change', 'cooldown_elapsed') then
+  if normalized_reason is null
+    or normalized_reason not in ('material_change', 'cooldown_elapsed') then
     return query
     select
       queue_row.id,
@@ -187,7 +188,8 @@ begin
   if normalized_reason = 'material_change'
     and not app_private.offer_has_persisted_material_snapshot(
       queue_row.workspace_id,
-      queue_row.offer_id
+      queue_row.offer_id,
+      queue_row.last_reviewed_at
     ) then
     return query
     select
@@ -248,7 +250,8 @@ $$;
 
 create or replace function app_private.offer_has_persisted_material_snapshot(
   target_workspace_id uuid,
-  target_offer_id uuid
+  target_offer_id uuid,
+  target_last_reviewed_at timestamptz
 )
 returns boolean
 language plpgsql
@@ -265,6 +268,10 @@ begin
   from public.price_snapshots as snapshot
   where snapshot.workspace_id = target_workspace_id
     and snapshot.offer_id = target_offer_id
+    and (
+      target_last_reviewed_at is null
+      or snapshot.observed_at > target_last_reviewed_at
+    )
   order by snapshot.observed_at desc, snapshot.id desc
   limit 1;
 
@@ -363,7 +370,8 @@ revoke all on function app_private.capture_review_cooldown_elapsed(
 
 revoke all on function app_private.offer_has_persisted_material_snapshot(
   uuid,
-  uuid
+  uuid,
+  timestamptz
 ) from public, anon, authenticated;
 
 revoke all on function app_private.add_capture_review_note(
