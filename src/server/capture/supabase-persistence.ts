@@ -18,6 +18,7 @@ type MembershipRow = {
 
 type OfferRow = {
   id: string;
+  dedupe_key: string;
   affiliate_url: string;
   current_price: number | string;
   discount_percent: number | string | null;
@@ -64,7 +65,7 @@ export class SupabaseCapturePersistenceRepository implements CapturePersistenceR
   ): Promise<PersistedCaptureOffer | null> {
     const { data, error } = await this.supabase
       .from('offers')
-      .select('id, affiliate_url, current_price, discount_percent, coupon_code, free_shipping, commission_percent, last_seen_at')
+      .select('id, dedupe_key, affiliate_url, current_price, discount_percent, coupon_code, free_shipping, commission_percent, last_seen_at')
       .eq('workspace_id', workspaceId)
       .eq('dedupe_key', dedupeKey)
       .maybeSingle();
@@ -85,19 +86,18 @@ export class SupabaseCapturePersistenceRepository implements CapturePersistenceR
       workspace_id: input.workspaceId,
       marketplace: 'manual',
       external_id: offer.externalId,
-      dedupe_key: offer.dedupeKey,
+      dedupe_key: input.existing?.dedupeKey ?? offer.dedupeKey,
       source_url: offer.sourceUrl,
       affiliate_url: offer.affiliateUrl ?? input.existing?.affiliateUrl,
       title: offer.title,
       image_url: offer.imageUrl ?? null,
-      category_id: null,
       current_price: offer.currentPrice,
       previous_price: offer.previousPrice ?? null,
       currency: offer.currency,
       discount_percent: offer.discountPercent ?? null,
       coupon_code: offer.couponCode ?? null,
       free_shipping: offer.freeShipping ?? input.existing?.freeShipping ?? false,
-      commission_percent: offer.commissionPercent ?? null,
+      commission_percent: offer.commissionPercent ?? input.existing?.commissionPercent ?? null,
       score: input.scoredOffer.score,
       score_version: input.scoredOffer.scoreVersion,
       score_factors: input.scoredOffer.scoreFactors,
@@ -107,23 +107,28 @@ export class SupabaseCapturePersistenceRepository implements CapturePersistenceR
       updated_by: input.actorUserId
     };
 
+    const insertBase = {
+      ...base,
+      category_id: null
+    };
+
     const query = input.existing
       ? this.supabase
           .from('offers')
           .update(base)
           .eq('workspace_id', input.workspaceId)
           .eq('id', input.existing.id)
-          .select('id, affiliate_url, current_price, discount_percent, coupon_code, free_shipping, commission_percent, last_seen_at')
+          .select('id, dedupe_key, affiliate_url, current_price, discount_percent, coupon_code, free_shipping, commission_percent, last_seen_at')
           .single()
       : this.supabase
           .from('offers')
           .insert({
-            ...base,
+            ...insertBase,
             captured_at: input.observedAt,
             created_by: input.actorUserId,
             created_at: input.observedAt
           })
-          .select('id, affiliate_url, current_price, discount_percent, coupon_code, free_shipping, commission_percent, last_seen_at')
+          .select('id, dedupe_key, affiliate_url, current_price, discount_percent, coupon_code, free_shipping, commission_percent, last_seen_at')
           .single();
 
     const { data, error } = await query;
@@ -223,6 +228,7 @@ export class SupabaseCapturePersistenceRepository implements CapturePersistenceR
 function mapPersistedOffer(row: OfferRow): PersistedCaptureOffer {
   return {
     id: row.id,
+    dedupeKey: row.dedupe_key,
     affiliateUrl: row.affiliate_url,
     currentPrice: toNumber(row.current_price),
     discountPercent: row.discount_percent === null ? null : toNumber(row.discount_percent),

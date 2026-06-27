@@ -364,3 +364,27 @@ returns table (
 - Nenhuma IA.
 - Nenhum uso de service role.
 - Nenhuma alteracao em staging ou producao.
+
+## Revisao PR #15 - Ajustes de Integridade do Manual Connector
+
+Status: aplicado na branch `feature/phase-5c-first-connector`.
+
+### Correcoes
+
+- Recaptura manual agora preserva categoria existente ao atualizar `offers`.
+- Recaptura que adiciona `externalId` depois de uma captura por URL consulta a
+  identidade fallback por URL antes de inserir, evitando duplicidade.
+- Recaptura que omite `freeShipping` preserva o valor ja persistido e usa o
+  valor efetivo em snapshots/highlights.
+- Recaptura que omite `commissionPercent` preserva a comissao ja persistida.
+- Capturas stale, com `capturedAt` anterior ao `last_seen_at` persistido, nao
+  sobrescrevem o estado atual da oferta.
+- Itens duplicados no mesmo payload e mesma janela de observacao usam a ultima
+  ocorrencia processada, evitando snapshot obsoleto no mesmo `observed_at`.
+
+### Restricoes mantidas
+
+- Nenhuma migration nova.
+- Nenhuma alteracao de schema.
+- Nenhum marketplace real.
+- Nenhuma alteracao em staging/producao.

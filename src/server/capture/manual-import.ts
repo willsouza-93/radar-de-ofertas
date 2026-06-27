@@ -11,10 +11,15 @@ import type { ManualImportRecord } from '@/server/connectors/manual';
 import { AppError, validationError } from '@/server/offers/errors';
 import { assertAdmin, resolveActiveWorkspaceForUser, type MembershipRepository } from '@/server/offers/workspace';
 
-import { EditorialCooldownPolicy, type EditorialCooldownDecision, type ExistingOfferEditorialState } from './deduplication';
+import {
+  calculateDedupeKey,
+  EditorialCooldownPolicy,
+  type EditorialCooldownDecision,
+  type ExistingOfferEditorialState
+} from './deduplication';
 import type { StructuredLog } from './observability';
 import { createCapturePipeline } from './pipeline';
-import { DEFAULT_EDITORIAL_COOLDOWN_HOURS, type CaptureContext, type PipelineItemFailure, type ScoredOffer } from './types';
+import { DEFAULT_EDITORIAL_COOLDOWN_HOURS, type CaptureContext, type PipelineItemFailure, type PipelineItemSuccess, type ScoredOffer } from './types';
 
 export const manualImportPayloadSchema = z.object({
   records: z.array(z.object({
@@ -42,6 +47,7 @@ export type ManualImportPayload = z.infer<typeof manualImportPayloadSchema>;
 
 export interface PersistedCaptureOffer extends ExistingOfferEditorialState {
   id: string;
+  dedupeKey: string;
   affiliateUrl: string;
   lastSeenAt: string;
 }
@@ -183,8 +189,11 @@ export async function importManualOffers(
     logs: pipelineRun.logs
   };
 
-  for (const item of pipelineRun.result.items) {
-    if (item.status !== 'processed') continue;
+  const latestProcessedItems = getLatestProcessedItemsByObservation(
+    pipelineRun.result.items.filter((item): item is PipelineItemSuccess => item.status === 'processed')
+  );
+
+  for (const item of latestProcessedItems) {
     const persisted = await persistScoredOffer(item.scoredOffer, {
       workspaceId: membership.workspaceId,
       actorUserId: membership.userId,
@@ -250,10 +259,23 @@ async function persistScoredOffer(
     correlationId: string;
   }
 ): Promise<CapturePersistenceResult> {
-  const existing = await args.repository.findOfferByDedupeKey(
-    args.workspaceId,
-    scoredOffer.normalizedOffer.dedupeKey
-  );
+  const existing = await resolveExistingOffer(args.workspaceId, scoredOffer, args.repository);
+
+  if (existing && isStaleCapture(args.observedAt, existing.lastSeenAt)) {
+    return {
+      offerId: existing.id,
+      created: false,
+      updated: false,
+      snapshotCreated: false,
+      queueState: 'not_reentered',
+      editorialDecision: {
+        shouldReenter: false,
+        reason: 'cooldown_not_elapsed',
+        materialChanges: [],
+        cooldownHours: DEFAULT_EDITORIAL_COOLDOWN_HOURS
+      }
+    };
+  }
 
   if (!scoredOffer.normalizedOffer.affiliateUrl && !existing?.affiliateUrl) {
     throw new AppError(
@@ -263,6 +285,8 @@ async function persistScoredOffer(
     );
   }
 
+  const effectiveScoredOffer = applyPersistedFallbacks(scoredOffer, existing);
+
   const queue = existing
     ? await args.repository.getApprovalQueueState(args.workspaceId, existing.id)
     : null;
@@ -270,22 +294,22 @@ async function persistScoredOffer(
     ? { ...existing, lastEditorialReviewAt: queue?.lastReviewedAt ?? existing.lastEditorialReviewAt ?? null }
     : null;
   const editorialDecision = new EditorialCooldownPolicy().evaluate({
-    offer: scoredOffer.normalizedOffer,
+    offer: effectiveScoredOffer.normalizedOffer,
     existing: existingState,
     observedAt: args.observedAt
   });
   const offer = await args.repository.upsertOffer({
     workspaceId: args.workspaceId,
     actorUserId: args.actorUserId,
-    scoredOffer,
+    scoredOffer: effectiveScoredOffer,
     existing,
     observedAt: args.observedAt
   });
-  const snapshotCreated = shouldCreateSnapshot(scoredOffer, existing)
+  const snapshotCreated = shouldCreateSnapshot(effectiveScoredOffer, existing)
     ? await args.repository.createPriceSnapshot({
         workspaceId: args.workspaceId,
         offerId: offer.id,
-        scoredOffer,
+        scoredOffer: effectiveScoredOffer,
         observedAt: args.observedAt
       })
     : false;
@@ -318,7 +342,7 @@ async function persistScoredOffer(
     const queueInput = {
       workspaceId: args.workspaceId,
       offerId: offer.id,
-      priorityScore: scoredOffer.score,
+      priorityScore: effectiveScoredOffer.score,
       reentryReason,
       captureRunId: args.captureRunId,
       correlationId: args.correlationId
@@ -357,6 +381,79 @@ async function persistScoredOffer(
         : 'Fila de curadoria indisponivel para a captura atual.'
     };
   }
+}
+
+async function resolveExistingOffer(
+  workspaceId: string,
+  scoredOffer: ScoredOffer,
+  repository: CapturePersistenceRepository
+): Promise<PersistedCaptureOffer | null> {
+  const primary = await repository.findOfferByDedupeKey(
+    workspaceId,
+    scoredOffer.normalizedOffer.dedupeKey
+  );
+  if (primary) return primary;
+
+  const urlFallback = calculateDedupeKey({
+    sourceKey: scoredOffer.normalizedOffer.sourceKey,
+    externalId: null,
+    canonicalSourceUrl: scoredOffer.normalizedOffer.canonicalSourceUrl
+  });
+
+  if (urlFallback.dedupeKey === scoredOffer.normalizedOffer.dedupeKey) return null;
+  return repository.findOfferByDedupeKey(workspaceId, urlFallback.dedupeKey);
+}
+
+function applyPersistedFallbacks(
+  scoredOffer: ScoredOffer,
+  existing: PersistedCaptureOffer | null
+): ScoredOffer {
+  if (!existing) return scoredOffer;
+
+  const normalizedOffer = {
+    ...scoredOffer.normalizedOffer,
+    freeShipping: scoredOffer.normalizedOffer.freeShipping ?? existing.freeShipping ?? false,
+    commissionPercent: scoredOffer.normalizedOffer.commissionPercent ?? existing.commissionPercent ?? null,
+    sellerKey: existing.sellerKey ?? null,
+    availability: existing.availability ?? null
+  };
+
+  const highlights = new Set(
+    scoredOffer.highlights.filter((highlight) =>
+      highlight !== 'free_shipping' && highlight !== 'high_commission'
+    )
+  );
+
+  if (normalizedOffer.freeShipping) highlights.add('free_shipping');
+  if (normalizedOffer.commissionPercent !== null && normalizedOffer.commissionPercent >= 8) {
+    highlights.add('high_commission');
+  }
+
+  return {
+    ...scoredOffer,
+    normalizedOffer,
+    highlights: Array.from(highlights)
+  };
+}
+
+function isStaleCapture(observedAt: string, lastSeenAt: string): boolean {
+  const observedTime = new Date(observedAt).getTime();
+  const lastSeenTime = new Date(lastSeenAt).getTime();
+  if (Number.isNaN(observedTime) || Number.isNaN(lastSeenTime)) return false;
+  return observedTime < lastSeenTime;
+}
+
+function getLatestProcessedItemsByObservation(items: PipelineItemSuccess[]): PipelineItemSuccess[] {
+  const latestByKey = new Map<string, PipelineItemSuccess>();
+  for (const item of items) {
+    latestByKey.set(
+      `${item.normalizedOffer.dedupeKey}:${item.normalizedOffer.capturedAt}`,
+      item
+    );
+  }
+  return items.filter((item) =>
+    latestByKey.get(`${item.normalizedOffer.dedupeKey}:${item.normalizedOffer.capturedAt}`) === item
+  );
 }
 
 function resolveReviewSubmissionReason(

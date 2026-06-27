@@ -65,6 +65,45 @@ describe('importManualOffers', () => {
     expect(repository.snapshots).toHaveLength(2);
   });
 
+  it('deduplicates repeated records in the same observation window using the latest item', async () => {
+    const repository = new InMemoryCaptureRepository();
+
+    const result = await importManualOffers(
+      {
+        records: [
+          buildPayload({ currentPrice: '3999.90' }).records[0],
+          buildPayload({ currentPrice: '3799.90' }).records[0]
+        ]
+      },
+      buildContext(repository, '2026-06-26T10:00:00.000Z')
+    );
+
+    expect(result.processed).toBe(2);
+    expect(result.persisted).toBe(1);
+    expect(repository.offers).toHaveLength(1);
+    expect(repository.offers[0]?.currentPrice).toBe(3799.9);
+    expect(repository.snapshots).toEqual([
+      expect.objectContaining({ price: 3799.9 })
+    ]);
+  });
+
+  it('uses URL fallback identity when a later recapture adds an external id', async () => {
+    const repository = new InMemoryCaptureRepository();
+    await importManualOffers(
+      buildPayload({ externalId: null }),
+      buildContext(repository, '2026-06-26T10:00:00.000Z')
+    );
+
+    const result = await importManualOffers(
+      buildPayload({ currentPrice: '3899.90' }),
+      buildContext(repository, '2026-06-26T11:00:00.000Z')
+    );
+
+    expect(result.updatedOffers).toBe(1);
+    expect(repository.offers).toHaveLength(1);
+    expect(repository.offers[0]?.currentPrice).toBe(3899.9);
+  });
+
   it('allows editorial re-entry after the 24 hour cooldown', async () => {
     const repository = new InMemoryCaptureRepository();
     await importManualOffers(buildPayload(), buildContext(repository, '2026-06-26T10:00:00.000Z'));
@@ -118,6 +157,45 @@ describe('importManualOffers', () => {
     expect(result.queueReentered).toBe(0);
     expect(result.queueSkipped).toBe(1);
     expect(repository.queues[0]?.status).toBe('approved');
+  });
+
+  it('preserves existing shipping and commission when recaptures omit optional signals', async () => {
+    const repository = new InMemoryCaptureRepository();
+    await importManualOffers(buildPayload(), buildContext(repository, '2026-06-26T10:00:00.000Z'));
+
+    const result = await importManualOffers(
+      buildPayload({
+        currentPrice: '3799.90',
+        freeShipping: null,
+        commissionPercent: null
+      }),
+      buildContext(repository, '2026-06-26T11:00:00.000Z')
+    );
+
+    expect(result.updatedOffers).toBe(1);
+    expect(repository.offers[0]?.freeShipping).toBe(true);
+    expect(repository.offers[0]?.commissionPercent).toBe(8.5);
+    expect(repository.snapshots.at(-1)).toEqual(
+      expect.objectContaining({
+        price: 3799.9,
+        freeShipping: true
+      })
+    );
+  });
+
+  it('ignores stale recaptures for current offer state', async () => {
+    const repository = new InMemoryCaptureRepository();
+    await importManualOffers(buildPayload(), buildContext(repository, '2026-06-26T10:00:00.000Z'));
+
+    const result = await importManualOffers(
+      buildPayload({ currentPrice: '2999.90' }),
+      buildContext(repository, '2026-06-26T09:00:00.000Z')
+    );
+
+    expect(result.updatedOffers).toBe(0);
+    expect(result.snapshotsCreated).toBe(0);
+    expect(repository.offers[0]?.currentPrice).toBe(3999.9);
+    expect(repository.offers[0]?.lastSeenAt).toBe('2026-06-26T10:00:00.000Z');
   });
 
   it('does not reopen terminal queue for commission-only changes before persisted evidence exists', async () => {
@@ -206,7 +284,12 @@ class InMemoryCaptureRepository implements CapturePersistenceRepository {
     status: 'pending' | 'approved' | 'rejected';
     lastReviewedAt: string | null;
   }> = [];
-  snapshots: Array<{ offerId: string; observedAt: string }> = [];
+  snapshots: Array<{
+    offerId: string;
+    observedAt: string;
+    price: number;
+    freeShipping: boolean | null | undefined;
+  }> = [];
   reviewSubmissions = 0;
 
   async listActiveMembershipsForUser(userId: string): Promise<ActiveMembership[]> {
@@ -214,7 +297,7 @@ class InMemoryCaptureRepository implements CapturePersistenceRepository {
   }
 
   async findOfferByDedupeKey(_workspaceId: string, dedupeKey: string) {
-    return this.offers.find((offer) => offer.id === dedupeKey) ?? null;
+    return this.offers.find((offer) => offer.dedupeKey === dedupeKey) ?? null;
   }
 
   async upsertOffer(input: {
@@ -226,13 +309,14 @@ class InMemoryCaptureRepository implements CapturePersistenceRepository {
   }) {
     const normalized = input.scoredOffer.normalizedOffer;
     const offer: PersistedCaptureOffer = {
-      id: normalized.dedupeKey,
+      id: input.existing?.id ?? normalized.dedupeKey,
+      dedupeKey: input.existing?.dedupeKey ?? normalized.dedupeKey,
       affiliateUrl: normalized.affiliateUrl ?? input.existing?.affiliateUrl ?? '',
       currentPrice: normalized.currentPrice,
       discountPercent: normalized.discountPercent ?? null,
       couponCode: normalized.couponCode ?? null,
       freeShipping: normalized.freeShipping ?? input.existing?.freeShipping ?? false,
-      commissionPercent: normalized.commissionPercent ?? null,
+      commissionPercent: normalized.commissionPercent ?? input.existing?.commissionPercent ?? null,
       lastSeenAt: input.observedAt,
       lastEditorialReviewAt: null
     };
@@ -243,8 +327,13 @@ class InMemoryCaptureRepository implements CapturePersistenceRepository {
     return offer;
   }
 
-  async createPriceSnapshot(input: { offerId: string; observedAt: string }) {
-    this.snapshots.push({ offerId: input.offerId, observedAt: input.observedAt });
+  async createPriceSnapshot(input: { offerId: string; observedAt: string; scoredOffer: ScoredOffer }) {
+    this.snapshots.push({
+      offerId: input.offerId,
+      observedAt: input.observedAt,
+      price: input.scoredOffer.normalizedOffer.currentPrice,
+      freeShipping: input.scoredOffer.normalizedOffer.freeShipping
+    });
     return true;
   }
 
