@@ -172,6 +172,33 @@ begin
     return;
   end if;
 
+  if normalized_reason = 'cooldown_elapsed'
+    and not app_private.capture_review_cooldown_elapsed(queue_row.last_reviewed_at, current_timestamp) then
+    return query
+    select
+      queue_row.id,
+      queue_row.offer_id,
+      queue_row.status,
+      false,
+      'not_reentered'::text;
+    return;
+  end if;
+
+  if normalized_reason = 'material_change'
+    and not app_private.offer_has_persisted_material_snapshot(
+      queue_row.workspace_id,
+      queue_row.offer_id
+    ) then
+    return query
+    select
+      queue_row.id,
+      queue_row.offer_id,
+      queue_row.status,
+      false,
+      'not_reentered'::text;
+    return;
+  end if;
+
   update public.approval_queue as queue
   set
     status = 'pending'::public.approval_status,
@@ -202,6 +229,67 @@ begin
     queue_row.status,
     true,
     'reopened'::text;
+end;
+$$;
+
+create or replace function app_private.capture_review_cooldown_elapsed(
+  last_reviewed_at timestamptz,
+  observed_at timestamptz
+)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select last_reviewed_at is not null
+    and observed_at >= last_reviewed_at + interval '24 hours';
+$$;
+
+create or replace function app_private.offer_has_persisted_material_snapshot(
+  target_workspace_id uuid,
+  target_offer_id uuid
+)
+returns boolean
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+declare
+  latest public.price_snapshots%rowtype;
+  previous public.price_snapshots%rowtype;
+begin
+  select *
+  into latest
+  from public.price_snapshots as snapshot
+  where snapshot.workspace_id = target_workspace_id
+    and snapshot.offer_id = target_offer_id
+  order by snapshot.observed_at desc, snapshot.id desc
+  limit 1;
+
+  if not found then
+    return false;
+  end if;
+
+  select *
+  into previous
+  from public.price_snapshots as snapshot
+  where snapshot.workspace_id = target_workspace_id
+    and snapshot.offer_id = target_offer_id
+    and snapshot.id <> latest.id
+  order by snapshot.observed_at desc, snapshot.id desc
+  limit 1;
+
+  if not found then
+    return false;
+  end if;
+
+  return latest.price is distinct from previous.price
+    or latest.previous_price is distinct from previous.previous_price
+    or latest.discount_percent is distinct from previous.discount_percent
+    or latest.coupon_code is distinct from previous.coupon_code
+    or latest.free_shipping is distinct from previous.free_shipping;
 end;
 $$;
 
@@ -267,6 +355,16 @@ grant execute on function public.submit_capture_for_review(
   text,
   text
 ) to authenticated;
+
+revoke all on function app_private.capture_review_cooldown_elapsed(
+  timestamptz,
+  timestamptz
+) from public, anon, authenticated;
+
+revoke all on function app_private.offer_has_persisted_material_snapshot(
+  uuid,
+  uuid
+) from public, anon, authenticated;
 
 revoke all on function app_private.add_capture_review_note(
   uuid,

@@ -3,6 +3,7 @@ import type { SupabaseServerClient } from '@/server/supabase/server';
 import type { ActiveMembership, OfferHighlight } from '@/server/offers/types';
 
 import type {
+  CaptureReviewSubmissionReason,
   CapturePersistenceRepository,
   PersistedCaptureOffer
 } from './manual-import';
@@ -174,7 +175,7 @@ export class SupabaseCapturePersistenceRepository implements CapturePersistenceR
     workspaceId: string;
     offerId: string;
     priorityScore: number;
-    reentryReason: string;
+    reentryReason: CaptureReviewSubmissionReason;
     captureRunId: string;
     correlationId: string;
   }): Promise<{ id: string }> {
@@ -185,7 +186,7 @@ export class SupabaseCapturePersistenceRepository implements CapturePersistenceR
     workspaceId: string;
     offerId: string;
     priorityScore: number;
-    reentryReason: string;
+    reentryReason: CaptureReviewSubmissionReason;
     captureRunId: string;
     correlationId: string;
   }): Promise<{ id: string }> {
@@ -196,7 +197,7 @@ export class SupabaseCapturePersistenceRepository implements CapturePersistenceR
     workspaceId: string;
     offerId: string;
     priorityScore: number;
-    reentryReason: string;
+    reentryReason: CaptureReviewSubmissionReason;
     captureRunId: string;
     correlationId: string;
   }): Promise<{ id: string }> {

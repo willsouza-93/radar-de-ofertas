@@ -44,6 +44,7 @@ describe('importManualOffers', () => {
     expect(result.queueCreated).toBe(0);
     expect(result.queueSkipped).toBe(1);
     expect(repository.queues).toHaveLength(1);
+    expect(repository.reviewSubmissions).toBe(2);
   });
 
   it('keeps one pending queue and creates snapshots for repeated material captures', async () => {
@@ -98,6 +99,25 @@ describe('importManualOffers', () => {
 
     expect(result.queueReentered).toBe(1);
     expect(result.snapshotsCreated).toBe(1);
+  });
+
+  it('does not reopen terminal queue for non-persisted metadata changes before cooldown elapses', async () => {
+    const repository = new InMemoryCaptureRepository();
+    await importManualOffers(buildPayload(), buildContext(repository, '2026-06-26T10:00:00.000Z'));
+    repository.queues[0] = {
+      ...repository.queues[0]!,
+      status: 'approved',
+      lastReviewedAt: '2026-06-26T10:00:00.000Z'
+    };
+
+    const result = await importManualOffers(
+      buildPayload({ sellerName: 'Novo seller observado', availability: 'limited_stock' }),
+      buildContext(repository, '2026-06-26T12:00:00.000Z')
+    );
+
+    expect(result.queueReentered).toBe(0);
+    expect(result.queueSkipped).toBe(1);
+    expect(repository.queues[0]?.status).toBe('approved');
   });
 
   it('keeps affiliate-less captures valid in the pipeline but blocks new offer persistence on current schema', async () => {
@@ -168,6 +188,7 @@ class InMemoryCaptureRepository implements CapturePersistenceRepository {
     lastReviewedAt: string | null;
   }> = [];
   snapshots: Array<{ offerId: string; observedAt: string }> = [];
+  reviewSubmissions = 0;
 
   async listActiveMembershipsForUser(userId: string): Promise<ActiveMembership[]> {
     return userId === adminMembership.userId ? [adminMembership] : [];
@@ -214,6 +235,10 @@ class InMemoryCaptureRepository implements CapturePersistenceRepository {
   }
 
   async createApprovalQueue(input: { offerId: string }) {
+    this.reviewSubmissions += 1;
+    const existing = this.queues.find((item) => item.offerId === input.offerId);
+    if (existing) return { id: existing.id };
+
     const queue = {
       id: `queue-${this.queues.length + 1}`,
       offerId: input.offerId,
@@ -225,6 +250,7 @@ class InMemoryCaptureRepository implements CapturePersistenceRepository {
   }
 
   async reopenApprovalQueue(input: { offerId: string }) {
+    this.reviewSubmissions += 1;
     const queue = this.queues.find((item) => item.offerId === input.offerId);
     if (!queue) throw new Error('Queue not found.');
     queue.status = 'pending';

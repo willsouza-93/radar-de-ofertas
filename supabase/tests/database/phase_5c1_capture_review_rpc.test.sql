@@ -166,6 +166,38 @@ set
   updated_at = '2026-06-25T10:30:00Z'
 where id = '51000000-0000-0000-0000-000000005103';
 
+insert into public.price_snapshots (
+  workspace_id,
+  offer_id,
+  price,
+  previous_price,
+  discount_percent,
+  coupon_code,
+  free_shipping,
+  observed_at
+)
+values
+  (
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '41000000-0000-0000-0000-000000005103',
+    99.90,
+    129.90,
+    23.09,
+    null,
+    false,
+    '2026-06-25T10:00:00Z'
+  ),
+  (
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '41000000-0000-0000-0000-000000005103',
+    89.90,
+    129.90,
+    30.79,
+    null,
+    false,
+    '2026-06-27T10:00:00Z'
+  );
+
 select ok(
   has_function_privilege(
     'authenticated',
@@ -257,6 +289,19 @@ select results_eq(
     )$$,
   $$values ('approved'::text, false, 'not_reentered'::text)$$,
   'Approved offer does not reenter review when editorial cooldown is not elapsed'
+);
+
+select results_eq(
+  $$select queue_status::text, submitted, action
+    from public.submit_capture_for_review(
+      '41000000-0000-0000-0000-000000005102',
+      78,
+      'material_change',
+      'capture-run-material-without-snapshot',
+      'correlation-material-without-snapshot'
+    )$$,
+  $$values ('approved'::text, false, 'not_reentered'::text)$$,
+  'Terminal queue does not trust material_change without persisted snapshot evidence'
 );
 
 select results_eq(

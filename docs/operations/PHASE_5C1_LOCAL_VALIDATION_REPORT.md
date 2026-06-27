@@ -123,10 +123,10 @@ Executado em 2026-06-27:
 
 | Comando | Resultado |
 | --- | --- |
-| `npx.cmd supabase db reset` | PASS |
-| `npx.cmd supabase test db` | PASS - 4 arquivos, 127 testes pgTAP |
+| `npx.cmd supabase db reset` | Migrations e seed aplicados; comando retornou non-zero por healthcheck auxiliar do Storage no Windows |
+| `npx.cmd supabase test db` | PASS - 4 arquivos, 128 testes pgTAP |
 | `npm.cmd run typecheck` | PASS |
-| `npm.cmd test` | PASS - 16 arquivos, 103 testes |
+| `npm.cmd test` | PASS - 16 arquivos, 104 testes |
 | `npm.cmd run build` | PASS |
 | `git diff --check` | PASS |
 | `npx.cmd supabase db advisors --local --type security --fail-on none` | PASS - nenhum achado |

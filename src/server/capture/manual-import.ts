@@ -14,7 +14,7 @@ import { assertAdmin, resolveActiveWorkspaceForUser, type MembershipRepository }
 import { EditorialCooldownPolicy, type EditorialCooldownDecision, type ExistingOfferEditorialState } from './deduplication';
 import type { StructuredLog } from './observability';
 import { createCapturePipeline } from './pipeline';
-import type { CaptureContext, PipelineItemFailure, ScoredOffer } from './types';
+import { DEFAULT_EDITORIAL_COOLDOWN_HOURS, type CaptureContext, type PipelineItemFailure, type ScoredOffer } from './types';
 
 export const manualImportPayloadSchema = z.object({
   records: z.array(z.object({
@@ -56,6 +56,10 @@ export interface CapturePersistenceResult {
   warning?: string;
 }
 
+export type CaptureReviewSubmissionReason =
+  | EditorialCooldownDecision['reason']
+  | 'already_pending';
+
 export interface CapturePersistenceRepository extends MembershipRepository {
   findOfferByDedupeKey(workspaceId: string, dedupeKey: string): Promise<PersistedCaptureOffer | null>;
   upsertOffer(input: {
@@ -80,7 +84,7 @@ export interface CapturePersistenceRepository extends MembershipRepository {
     workspaceId: string;
     offerId: string;
     priorityScore: number;
-    reentryReason: EditorialCooldownDecision['reason'];
+    reentryReason: CaptureReviewSubmissionReason;
     captureRunId: string;
     correlationId: string;
   }): Promise<{ id: string }>;
@@ -88,7 +92,7 @@ export interface CapturePersistenceRepository extends MembershipRepository {
     workspaceId: string;
     offerId: string;
     priorityScore: number;
-    reentryReason: EditorialCooldownDecision['reason'];
+    reentryReason: CaptureReviewSubmissionReason;
     captureRunId: string;
     correlationId: string;
   }): Promise<{ id: string }>;
@@ -286,19 +290,18 @@ async function persistScoredOffer(
       })
     : false;
   const currentQueue = queue ?? await args.repository.getApprovalQueueState(args.workspaceId, offer.id);
+  const submissionReason = resolveReviewSubmissionReason(
+    editorialDecision,
+    existingState,
+    args.observedAt
+  );
+  const shouldSubmitForReview =
+    !currentQueue ||
+    currentQueue.status === 'pending' ||
+    submissionReason === 'material_change' ||
+    submissionReason === 'cooldown_elapsed';
 
-  if (currentQueue?.status === 'pending') {
-    return {
-      offerId: offer.id,
-      created: !existing,
-      updated: Boolean(existing),
-      snapshotCreated,
-      queueState: 'already_pending',
-      editorialDecision
-    };
-  }
-
-  if (!editorialDecision.shouldReenter) {
+  if (!shouldSubmitForReview) {
     return {
       offerId: offer.id,
       created: !existing,
@@ -310,22 +313,24 @@ async function persistScoredOffer(
   }
 
   try {
+    const reentryReason: CaptureReviewSubmissionReason =
+      currentQueue?.status === 'pending' ? 'already_pending' : submissionReason;
     const queueInput = {
       workspaceId: args.workspaceId,
       offerId: offer.id,
       priorityScore: scoredOffer.score,
-      reentryReason: editorialDecision.reason,
+      reentryReason,
       captureRunId: args.captureRunId,
       correlationId: args.correlationId
     };
-    if (!currentQueue) {
+    if (!currentQueue || currentQueue.status === 'pending') {
       await args.repository.createApprovalQueue(queueInput);
       return {
         offerId: offer.id,
         created: !existing,
         updated: Boolean(existing),
         snapshotCreated,
-        queueState: 'created',
+        queueState: currentQueue?.status === 'pending' ? 'already_pending' : 'created',
         editorialDecision
       };
     }
@@ -352,6 +357,35 @@ async function persistScoredOffer(
         : 'Fila de curadoria indisponivel para a captura atual.'
     };
   }
+}
+
+function resolveReviewSubmissionReason(
+  editorialDecision: EditorialCooldownDecision,
+  existing: ExistingOfferEditorialState | null,
+  observedAt: string
+): EditorialCooldownDecision['reason'] {
+  if (editorialDecision.reason !== 'material_change') return editorialDecision.reason;
+  if (hasPersistedMaterialChange(editorialDecision)) return 'material_change';
+  return hasCooldownElapsed(existing?.lastEditorialReviewAt ?? null, observedAt)
+    ? 'cooldown_elapsed'
+    : 'cooldown_not_elapsed';
+}
+
+function hasPersistedMaterialChange(editorialDecision: EditorialCooldownDecision): boolean {
+  return editorialDecision.materialChanges.some((change) =>
+    change === 'price' ||
+    change === 'discount' ||
+    change === 'coupon' ||
+    change === 'shipping'
+  );
+}
+
+function hasCooldownElapsed(lastReview: string | null, observedAt: string): boolean {
+  if (!lastReview) return true;
+  const observedTime = new Date(observedAt).getTime();
+  const lastReviewTime = new Date(lastReview).getTime();
+  if (Number.isNaN(observedTime) || Number.isNaN(lastReviewTime)) return false;
+  return observedTime - lastReviewTime >= DEFAULT_EDITORIAL_COOLDOWN_HOURS * 60 * 60 * 1000;
 }
 
 function shouldCreateSnapshot(scoredOffer: ScoredOffer, existing: PersistedCaptureOffer | null): boolean {

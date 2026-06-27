@@ -301,6 +301,11 @@ returns table (
 - Reentrada de fila terminal ocorre apenas por:
   - `material_change`;
   - `cooldown_elapsed`.
+- A RPC valida `cooldown_elapsed` no banco usando `last_reviewed_at + 24h`.
+- A RPC valida `material_change` por evidencia persistida nos dois ultimos
+  `price_snapshots`, evitando confiar apenas em parametro do cliente.
+- O adapter so encaminha `material_change` para mudancas persistidas em
+  snapshot: preco, desconto, cupom ou frete.
 - Reentrada controlada limpa ponteiros terminais da fila, mas preserva
   `approval_decisions` e `review_notes`.
 - Toda materializacao/reentrada registra nota operacional com:
