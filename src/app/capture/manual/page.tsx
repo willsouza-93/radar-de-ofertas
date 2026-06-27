@@ -106,8 +106,8 @@ export default function ManualCapturePage({
                     <p className="helper">Run: {result.run}</p>
                     {Number(result.queueSkipped) > 0 ? (
                       <p className="helper" role="status">
-                        Algumas ofertas foram salvas, mas nao entraram na curadoria porque a fila exige
-                        uma RPC controlada futura. Revise a lista de ofertas enquanto essa superficie nao existe.
+                        Algumas ofertas foram salvas sem nova fila porque ja estavam pendentes
+                        ou nao cumpriram cooldown/mudanca material para reentrada editorial.
                       </p>
                     ) : null}
                   </div>
@@ -125,7 +125,8 @@ export default function ManualCapturePage({
                 <div className="section-spaced">
                   <p className="helper">
                     Observacao: esta tela nao usa service role nem tenta insert/update direto em
-                    `approval_queue`. A criacao ou reentrada de curadoria depende de uma RPC segura futura.
+                    `approval_queue`. A criacao ou reentrada de curadoria usa a RPC segura
+                    `submit_capture_for_review`.
                   </p>
                 </div>
               </aside>

@@ -244,3 +244,123 @@ Fluxo implementado:
   persistir em `offers`.
 - O score da captura ainda e estrutural (`capture-structure-v1`), nao o score
   definitivo de negocio.
+
+## Fase 5C.1 - Capture Review RPC
+
+Status: implementado localmente para revisao.
+
+### Objetivo
+
+Resolver o bloqueio arquitetural identificado na Fase 5C: encaminhar ofertas
+capturadas para curadoria sem reabrir grants de `approval_queue`, sem usar
+service role e sem permitir bypass do historico de decisoes.
+
+Fluxo validado:
+
+`Manual input -> RawOffer -> Capture Pipeline -> offers -> price_snapshots -> submit_capture_for_review -> approval_queue.pending`
+
+### Entregas
+
+- Criada migration `20260627112112_phase_5c1_capture_review_rpc.sql`.
+- Criada RPC oficial `public.submit_capture_for_review(...)`.
+- Criada helper privada `app_private.add_capture_review_note(...)`.
+- Integrado `SupabaseCapturePersistenceRepository` para chamar a RPC.
+- Atualizada UI de import manual para comunicar comportamento de reentrada.
+- Adicionados testes pgTAP dedicados para a RPC.
+- Adicionados testes TypeScript para o adapter Supabase e capturas repetidas.
+
+### Contrato da RPC
+
+```sql
+public.submit_capture_for_review(
+  target_offer_id uuid,
+  target_priority_score integer,
+  target_reentry_reason text default null,
+  target_capture_run_id text default null,
+  target_correlation_id text default null
+)
+returns table (
+  queue_id uuid,
+  offer_id uuid,
+  queue_status public.approval_status,
+  submitted boolean,
+  action text
+)
+```
+
+### Invariantes implementados
+
+- `workspace_id` nunca e aceito do cliente.
+- Workspace e derivado exclusivamente de `offers.id`.
+- Apenas Admin ativo do workspace pode executar a submissao.
+- Editor, usuario suspenso, usuario sem membership, anon/Public Visitor e Admin
+  de outro workspace sao bloqueados.
+- Uma oferta possui no maximo uma linha de `approval_queue` por workspace.
+- Enquanto houver fila `pending`, novas capturas retornam a fila existente.
+- Captura nao cria `approval_decisions`.
+- Reentrada de fila terminal ocorre apenas por:
+  - `material_change`;
+  - `cooldown_elapsed`.
+- A RPC valida `cooldown_elapsed` no banco usando `last_reviewed_at + 24h`.
+- A RPC valida `material_change` por evidencia persistida nos dois ultimos
+  `price_snapshots`, exigindo que o snapshot material mais recente tenha sido
+  observado depois da ultima revisao editorial.
+- O adapter so encaminha `material_change` para mudancas persistidas em
+  snapshot: preco, desconto, cupom ou frete.
+- Mudanca isolada de comissao permanece material no conceito editorial, mas nao
+  reabre fila antes do cooldown enquanto o schema atual nao guardar historico
+  persistido de comissao.
+- Fila terminal sem `target_reentry_reason` explicito retorna `not_reentered`.
+- Reentrada controlada limpa ponteiros terminais da fila, mas preserva
+  `approval_decisions` e `review_notes`.
+- Toda materializacao/reentrada registra nota operacional com:
+  - `captureRunId`;
+  - `correlationId`;
+  - action;
+  - reason;
+  - actor (`created_by`).
+
+### Segurança
+
+- `submit_capture_for_review` usa `security definer` para atravessar a barreira
+  operacional de grants sem expor mutacao direta nas tabelas.
+- A funcao verifica `auth.uid()` explicitamente.
+- A funcao usa `app_private.has_role(..., array['admin'])`.
+- `execute` foi revogado de `public`, `anon` e `authenticated` antes do grant
+  explicito para `authenticated`.
+- `approval_queue` permanece sem grants de `insert`, `update` e `delete` para
+  `authenticated`.
+- `approval_decisions` permanece append-only pelo fluxo de curadoria humana.
+
+### Testes
+
+- pgTAP cobre:
+  - oferta nova cria `pending`;
+  - oferta ja pendente nao duplica fila;
+  - multiplas submisssoes mantem uma unica fila;
+  - oferta aprovada respeita cooldown;
+  - oferta rejeitada reentra por mudanca material;
+  - motivo de reentrada ausente bloqueado;
+  - snapshot material anterior a ultima revisao bloqueado;
+  - Editor negado;
+  - suspenso negado;
+  - sem membership negado;
+  - Admin de outro workspace negado;
+  - anon negado;
+  - assinatura da RPC nao aceita `workspaceId`;
+  - captura nao cria `approval_decisions`.
+- Vitest cobre:
+  - repository Supabase chamando RPC;
+  - reentrada via RPC;
+  - capturas repetidas com uma unica fila pendente e multiplos snapshots;
+  - mudanca isolada de comissao nao reabre antes do cooldown sem evidencia
+    persistida especifica.
+
+### Restricoes preservadas
+
+- Nenhum marketplace real.
+- Nenhum scheduler.
+- Nenhum Telegram.
+- Nenhuma IA.
+- Nenhum uso de service role.
+- Nenhuma alteracao em staging ou producao.
