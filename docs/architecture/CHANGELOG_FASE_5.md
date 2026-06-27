@@ -374,6 +374,9 @@ Status: aplicado na branch `feature/phase-5c-first-connector`.
 - Recaptura manual agora preserva categoria existente ao atualizar `offers`.
 - Recaptura que adiciona `externalId` depois de uma captura por URL consulta a
   identidade fallback por URL antes de inserir, evitando duplicidade.
+- Recapturas posteriores tambem reconciliam identidade por `externalId` e
+  `source_url` para evitar duplicidade quando uma fonte alterna entre enviar e
+  omitir `externalId`.
 - Recaptura que omite `freeShipping` preserva o valor ja persistido e usa o
   valor efetivo em snapshots/highlights.
 - Recaptura que omite `commissionPercent` preserva a comissao ja persistida.

@@ -104,6 +104,47 @@ describe('importManualOffers', () => {
     expect(repository.offers[0]?.currentPrice).toBe(3899.9);
   });
 
+  it('keeps matching upgraded external ids after URL fallback recaptures change source URL', async () => {
+    const repository = new InMemoryCaptureRepository();
+    await importManualOffers(
+      buildPayload({ externalId: null }),
+      buildContext(repository, '2026-06-26T10:00:00.000Z')
+    );
+    await importManualOffers(
+      buildPayload({ currentPrice: '3899.90' }),
+      buildContext(repository, '2026-06-26T11:00:00.000Z')
+    );
+
+    const result = await importManualOffers(
+      buildPayload({
+        sourceUrl: 'https://example.com/notebook-pro-14-v2',
+        currentPrice: '3799.90'
+      }),
+      buildContext(repository, '2026-06-26T12:00:00.000Z')
+    );
+
+    expect(result.updatedOffers).toBe(1);
+    expect(repository.offers).toHaveLength(1);
+    expect(repository.offers[0]?.currentPrice).toBe(3799.9);
+  });
+
+  it('matches existing external-id offers when later recaptures omit the id', async () => {
+    const repository = new InMemoryCaptureRepository();
+    await importManualOffers(buildPayload(), buildContext(repository, '2026-06-26T10:00:00.000Z'));
+
+    const result = await importManualOffers(
+      buildPayload({
+        externalId: null,
+        currentPrice: '3899.90'
+      }),
+      buildContext(repository, '2026-06-26T11:00:00.000Z')
+    );
+
+    expect(result.updatedOffers).toBe(1);
+    expect(repository.offers).toHaveLength(1);
+    expect(repository.offers[0]?.currentPrice).toBe(3899.9);
+  });
+
   it('allows editorial re-entry after the 24 hour cooldown', async () => {
     const repository = new InMemoryCaptureRepository();
     await importManualOffers(buildPayload(), buildContext(repository, '2026-06-26T10:00:00.000Z'));
@@ -300,6 +341,16 @@ class InMemoryCaptureRepository implements CapturePersistenceRepository {
     return this.offers.find((offer) => offer.dedupeKey === dedupeKey) ?? null;
   }
 
+  async findOfferByExternalIdentity(_workspaceId: string, marketplace: string, externalId: string) {
+    return this.offers.find((offer) =>
+      offer.marketplace === marketplace && offer.externalId === externalId
+    ) ?? null;
+  }
+
+  async findOfferBySourceUrl(_workspaceId: string, sourceUrl: string) {
+    return this.offers.find((offer) => offer.sourceUrl === sourceUrl) ?? null;
+  }
+
   async upsertOffer(input: {
     workspaceId: string;
     actorUserId: string;
@@ -311,6 +362,9 @@ class InMemoryCaptureRepository implements CapturePersistenceRepository {
     const offer: PersistedCaptureOffer = {
       id: input.existing?.id ?? normalized.dedupeKey,
       dedupeKey: input.existing?.dedupeKey ?? normalized.dedupeKey,
+      marketplace: 'manual',
+      externalId: normalized.externalId,
+      sourceUrl: normalized.sourceUrl,
       affiliateUrl: normalized.affiliateUrl ?? input.existing?.affiliateUrl ?? '',
       currentPrice: normalized.currentPrice,
       discountPercent: normalized.discountPercent ?? null,

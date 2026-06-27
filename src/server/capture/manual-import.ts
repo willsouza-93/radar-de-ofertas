@@ -48,6 +48,9 @@ export type ManualImportPayload = z.infer<typeof manualImportPayloadSchema>;
 export interface PersistedCaptureOffer extends ExistingOfferEditorialState {
   id: string;
   dedupeKey: string;
+  marketplace?: string;
+  externalId?: string;
+  sourceUrl?: string;
   affiliateUrl: string;
   lastSeenAt: string;
 }
@@ -68,6 +71,12 @@ export type CaptureReviewSubmissionReason =
 
 export interface CapturePersistenceRepository extends MembershipRepository {
   findOfferByDedupeKey(workspaceId: string, dedupeKey: string): Promise<PersistedCaptureOffer | null>;
+  findOfferByExternalIdentity(
+    workspaceId: string,
+    marketplace: string,
+    externalId: string
+  ): Promise<PersistedCaptureOffer | null>;
+  findOfferBySourceUrl(workspaceId: string, sourceUrl: string): Promise<PersistedCaptureOffer | null>;
   upsertOffer(input: {
     workspaceId: string;
     actorUserId: string;
@@ -394,14 +403,27 @@ async function resolveExistingOffer(
   );
   if (primary) return primary;
 
+  const externalIdentity = scoredOffer.normalizedOffer.externalId.startsWith('url:')
+    ? null
+    : await repository.findOfferByExternalIdentity(
+        workspaceId,
+        'manual',
+        scoredOffer.normalizedOffer.externalId
+      );
+  if (externalIdentity) return externalIdentity;
+
   const urlFallback = calculateDedupeKey({
     sourceKey: scoredOffer.normalizedOffer.sourceKey,
     externalId: null,
     canonicalSourceUrl: scoredOffer.normalizedOffer.canonicalSourceUrl
   });
 
-  if (urlFallback.dedupeKey === scoredOffer.normalizedOffer.dedupeKey) return null;
-  return repository.findOfferByDedupeKey(workspaceId, urlFallback.dedupeKey);
+  if (urlFallback.dedupeKey !== scoredOffer.normalizedOffer.dedupeKey) {
+    const urlIdentity = await repository.findOfferByDedupeKey(workspaceId, urlFallback.dedupeKey);
+    if (urlIdentity) return urlIdentity;
+  }
+
+  return repository.findOfferBySourceUrl(workspaceId, scoredOffer.normalizedOffer.sourceUrl);
 }
 
 function applyPersistedFallbacks(

@@ -74,6 +74,41 @@ export class SupabaseCapturePersistenceRepository implements CapturePersistenceR
     return data ? mapPersistedOffer(data as OfferRow) : null;
   }
 
+  async findOfferByExternalIdentity(
+    workspaceId: string,
+    marketplace: string,
+    externalId: string
+  ): Promise<PersistedCaptureOffer | null> {
+    const { data, error } = await this.supabase
+      .from('offers')
+      .select('id, dedupe_key, affiliate_url, current_price, discount_percent, coupon_code, free_shipping, commission_percent, last_seen_at')
+      .eq('workspace_id', workspaceId)
+      .eq('marketplace', marketplace)
+      .eq('external_id', externalId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    return data ? mapPersistedOffer(data as OfferRow) : null;
+  }
+
+  async findOfferBySourceUrl(
+    workspaceId: string,
+    sourceUrl: string
+  ): Promise<PersistedCaptureOffer | null> {
+    const { data, error } = await this.supabase
+      .from('offers')
+      .select('id, dedupe_key, affiliate_url, current_price, discount_percent, coupon_code, free_shipping, commission_percent, last_seen_at')
+      .eq('workspace_id', workspaceId)
+      .eq('marketplace', 'manual')
+      .eq('source_url', sourceUrl)
+      .order('last_seen_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    return data ? mapPersistedOffer(data as OfferRow) : null;
+  }
+
   async upsertOffer(input: {
     workspaceId: string;
     actorUserId: string;
