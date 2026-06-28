@@ -109,6 +109,7 @@ export interface PublicationPolicyContext {
   now: string;
   targetEnabled: boolean;
   manualPublicationEnabled: boolean;
+  automaticPublicationEnabled?: boolean;
   existingIdempotencyKeys?: ReadonlySet<string>;
   cooldownUntil?: string | null;
   targetWindow?: {
@@ -134,6 +135,7 @@ export interface PublicationContext {
   approvalDecisionId: string;
   target: PublicationTarget;
   redirectLink: string;
+  allowedRedirectOrigins: readonly string[];
   generatedAt: string;
 }
 
@@ -253,6 +255,7 @@ export interface PublicationPipelineInput {
   template: PublicationTemplate;
   publisher: Publisher;
   redirectLink: string;
+  allowedRedirectOrigins: readonly string[];
   requestedBy: string;
   mode: PublicationMode;
   now: string;

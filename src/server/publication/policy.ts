@@ -20,6 +20,10 @@ export function evaluatePublicationPolicy(
     return block('TARGET_DOES_NOT_SUPPORT_MANUAL_PUBLICATION', 'O destino nao suporta publicacao manual.');
   }
 
+  if (candidate.mode === 'automatic' && context.automaticPublicationEnabled !== true) {
+    return block('AUTOMATIC_PUBLICATION_DISABLED', 'Publicacao automatica nao esta habilitada para este contexto.');
+  }
+
   if (context.existingIdempotencyKeys?.has(candidate.idempotencyKey)) {
     return skip('DUPLICATE_PUBLICATION', 'Ja existe publicacao equivalente para este ciclo editorial.');
   }

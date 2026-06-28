@@ -7,7 +7,7 @@ export function renderPublicationTemplate(
   template: PublicationTemplate,
   context: PublicationContext
 ): RenderedMessage {
-  validateRedirectLink(context.redirectLink);
+  validateRedirectLink(context.redirectLink, context.allowedRedirectOrigins);
   validateTemplateShape(template);
 
   const variables = buildTemplateVariables(context);
@@ -39,6 +39,15 @@ export function renderPublicationTemplate(
     const value = variables[variableName];
     return escapeForFormat(String(value ?? fallbackForVariable(variableName)), template.format);
   });
+  const renderedRedirectLink = escapeForFormat(context.redirectLink, template.format);
+
+  if (!text.includes(renderedRedirectLink)) {
+    throw new TemplateError('Rendered message does not include redirect link.', {
+      code: 'REDIRECT_LINK_MISSING_FROM_MESSAGE',
+      safeMessage: 'Mensagem renderizada deve incluir o link de redirecionamento controlado.',
+      retryable: false
+    });
+  }
 
   if (/\{\{|\}\}/.test(text)) {
     throw new TemplateError('Malformed template placeholder.', {
@@ -49,7 +58,11 @@ export function renderPublicationTemplate(
   }
 
   const minLength = template.minLength ?? 1;
-  const maxLength = template.maxLength ?? context.target.maxTextLength ?? 4096;
+  const defaultMaxLength = 4096;
+  const maxLength = Math.min(
+    template.maxLength ?? defaultMaxLength,
+    context.target.maxTextLength ?? defaultMaxLength
+  );
 
   if (text.trim().length < minLength) {
     throw new TemplateError('Rendered message is too short.', {
@@ -109,7 +122,7 @@ function extractPlaceholders(templateBody: string): string[] {
 }
 
 export function buildPublicationContext(input: PublicationContext): PublicationContext {
-  validateRedirectLink(input.redirectLink);
+  validateRedirectLink(input.redirectLink, input.allowedRedirectOrigins);
   return input;
 }
 
@@ -160,7 +173,7 @@ function escapeForFormat(value: string, format: PublicationTemplate['format']): 
   return value.replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
 }
 
-function validateRedirectLink(link: string): void {
+function validateRedirectLink(link: string, allowedOrigins: readonly string[]): void {
   let parsed: URL;
   try {
     parsed = new URL(link);
@@ -177,6 +190,23 @@ function validateRedirectLink(link: string): void {
       code: 'INVALID_REDIRECT_LINK_PROTOCOL',
       safeMessage: 'Link de redirecionamento deve usar HTTP ou HTTPS.',
       retryable: false
+    });
+  }
+
+  if (allowedOrigins.length === 0) {
+    throw new TemplateError('At least one redirect origin must be allowed.', {
+      code: 'REDIRECT_ORIGIN_NOT_CONFIGURED',
+      safeMessage: 'Origem permitida do redirect nao foi configurada.',
+      retryable: false
+    });
+  }
+
+  if (!allowedOrigins.includes(parsed.origin)) {
+    throw new TemplateError('Redirect link origin is not allowed.', {
+      code: 'REDIRECT_ORIGIN_NOT_ALLOWED',
+      safeMessage: 'Link de redirecionamento nao pertence a uma origem permitida.',
+      retryable: false,
+      details: { origin: parsed.origin }
     });
   }
 

@@ -175,4 +175,15 @@ Supabase, staging, producao, publisher real, scheduler ou integracoes externas.
 - Pipeline passou a calcular `RetryDecision` tambem quando o publisher lanca
   excecao transitoria segura.
 - Observabilidade passou a sanitizar metadata aninhada.
+- Renderer passou a exigir que o texto final contenha o `redirectLink` aprovado.
+- Renderer passou a validar origem permitida do redirect, alem do path
+  `/r/{shortCode}`.
+- Renderer passou a aplicar o menor limite entre template e target.
+- Publisher contract passou a rejeitar formatos de mensagem nao suportados.
+- Policy passou a bloquear publicacao automatica sem habilitacao explicita.
+- Pipeline passou a retornar falha estruturada para oferta nao aprovada ou
+  decisao editorial stale.
+- Pipeline passou a preservar `retryAfter` top-level retornado pelo publisher.
+- Pipeline passou a marcar falhas ambiguas lancadas pelo publisher como
+  `ambiguous`/`paused`, exigindo reconciliacao manual.
 - Testes unitarios ampliados para cobrir edge cases encontrados no review.

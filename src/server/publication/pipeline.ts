@@ -31,14 +31,49 @@ import type {
 
 export async function runPublicationPipeline(input: PublicationPipelineInput): Promise<PublicationPipelineOutput> {
   const events: PublicationEvent[] = [];
-  const candidate = createPublicationCandidate({
-    approvedOffer: input.approvedOffer,
-    target: input.target,
-    candidateId: input.candidateId,
-    createdBy: input.requestedBy,
-    createdAt: input.now,
-    mode: input.mode
-  });
+  let candidate: PublicationCandidate;
+  try {
+    candidate = createPublicationCandidate({
+      approvedOffer: input.approvedOffer,
+      target: input.target,
+      candidateId: input.candidateId,
+      createdBy: input.requestedBy,
+      createdAt: input.now,
+      mode: input.mode
+    });
+  } catch (error) {
+    const publicationError = toPublicationError(error);
+    const result = errorToPublicationResult(publicationError);
+    events.push(
+      createPublicationEvent({
+        eventName: 'PublicationFailed',
+        workspaceId: input.approvedOffer.workspaceId,
+        offerId: input.approvedOffer.offerId,
+        correlationId: input.correlationId,
+        publisherId: input.publisher.id,
+        targetId: input.target.id,
+        status: result.status,
+        failureCode: publicationError.code,
+        safeMessage: publicationError.safeMessage,
+        createdAt: input.now
+      })
+    );
+
+    return {
+      candidate: createInvalidCandidatePlaceholder(input),
+      policyDecision: {
+        allowed: false,
+        action: 'block',
+        reason: publicationError.code,
+        safeMessage: publicationError.safeMessage,
+        warnings: []
+      },
+      job: null,
+      result,
+      retryDecision: null,
+      events
+    };
+  }
 
   events.push(
     createPublicationEvent({
@@ -106,6 +141,7 @@ export async function runPublicationPipeline(input: PublicationPipelineInput): P
       approvalDecisionId: activeCandidate.approvalDecisionId,
       target: activeCandidate.target,
       redirectLink: input.redirectLink,
+      allowedRedirectOrigins: input.allowedRedirectOrigins,
       generatedAt: input.now
     });
 
@@ -132,9 +168,22 @@ export async function runPublicationPipeline(input: PublicationPipelineInput): P
 
     const result = await input.publisher.publish(createPublicationRequest({ job, message: renderedMessage }));
     const finishedJob = updateJobFromResult(job, result, input.now);
-    const retryDecision = result.failure
+    const retryDecision = result.status === 'ambiguous' && !result.failure
       ? decidePublicationRetry({
-          failure: result.failure,
+          failure: {
+            category: 'ambiguous',
+            code: 'AMBIGUOUS_PUBLICATION_RESULT',
+            safeMessage: result.safeMessage,
+            retryable: false
+          },
+          attempt: finishedJob.attempt,
+          maxAttempts: input.publisher.limits.maxAttempts ?? 5,
+          now: input.now,
+          idempotencyKey: finishedJob.idempotencyKey
+        })
+      : result.failure
+      ? decidePublicationRetry({
+          failure: normalizeFailureForRetry(result.failure, result),
           attempt: finishedJob.attempt,
           maxAttempts: input.publisher.limits.maxAttempts ?? 5,
           now: input.now,
@@ -192,7 +241,11 @@ export async function runPublicationPipeline(input: PublicationPipelineInput): P
     };
   } catch (error) {
     const publicationError = toPublicationError(error);
-    const failedJob = job ? markJobFailed(job, input.now) : null;
+    const failedJob = job
+      ? publicationError.category === 'ambiguous'
+        ? markJobPaused(job, input.now)
+        : markJobFailed(job, input.now)
+      : null;
     const result = errorToPublicationResult(publicationError);
     const retryDecision =
       failedJob && result.failure
@@ -261,12 +314,36 @@ function updateJobFromResult(job: PublicationJob, result: PublicationResult, now
   return markJobFailed(job, now);
 }
 
+function normalizeFailureForRetry(
+  failure: PublicationFailure,
+  result: PublicationResult
+): PublicationFailure {
+  if (failure.retryAfter !== undefined || result.retryAfter === undefined) return failure;
+  return {
+    ...failure,
+    retryAfter: result.retryAfter
+  };
+}
+
 function errorToPublicationResult(error: {
   category: PublicationFailure['category'];
   code: string;
   safeMessage: string;
   retryable: boolean;
 }): PublicationResult {
+  if (error.category === 'ambiguous') {
+    return {
+      status: 'ambiguous',
+      safeMessage: error.safeMessage,
+      failure: {
+        category: 'ambiguous',
+        code: error.code,
+        safeMessage: error.safeMessage,
+        retryable: false
+      }
+    };
+  }
+
   return {
     status: error.retryable ? 'transient_failure' : 'permanent_failure',
     safeMessage: error.safeMessage,
@@ -276,5 +353,27 @@ function errorToPublicationResult(error: {
       safeMessage: error.safeMessage,
       retryable: error.retryable
     }
+  };
+}
+
+function createInvalidCandidatePlaceholder(input: PublicationPipelineInput): PublicationCandidate {
+  return {
+    id: input.candidateId,
+    workspaceId: input.approvedOffer.workspaceId,
+    offerId: input.approvedOffer.offerId,
+    approvalQueueId: input.approvedOffer.approvalQueueId,
+    approvalDecisionId: input.approvedOffer.approvalDecisionId,
+    snapshotId: input.approvedOffer.snapshot.id,
+    snapshotVersion: input.approvedOffer.snapshot.version,
+    target: input.target,
+    status: 'blocked',
+    priority: 0,
+    idempotencyKey: '',
+    mode: input.mode,
+    createdBy: input.requestedBy,
+    createdAt: input.now,
+    updatedAt: input.now,
+    blockedReason: 'INVALID_APPROVAL',
+    safeMessage: 'Oferta nao esta elegivel para publicacao.'
   };
 }

@@ -104,13 +104,22 @@ Cenarios cobertos:
   - limite maximo de retry;
   - publisher lancando excecao transitoria;
   - metadata sensivel aninhada.
+  - redirect ausente no texto renderizado;
+  - origem de redirect nao permitida;
+  - limite do target menor que limite do template;
+  - publicacao automatica sem habilitacao explicita;
+  - formato de mensagem nao suportado pelo publisher;
+  - resultado ambiguo sem payload de falha;
+  - erro ambiguo lancado pelo publisher;
+  - `retryAfter` top-level do publisher;
+  - oferta stale retornando falha estruturada.
 
 ## Validacoes locais
 
 | Comando | Resultado |
 | --- | --- |
 | `npm.cmd run typecheck` | Passou |
-| `npm.cmd test` | Passou: 17 arquivos de teste, 131 testes |
+| `npm.cmd test` | Passou: 17 arquivos de teste, 136 testes |
 | `npm.cmd run build` | Passou |
 | `git diff --check` | Passou |
 

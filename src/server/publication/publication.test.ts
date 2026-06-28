@@ -132,6 +132,14 @@ describe('publication policy', () => {
     ).toBe('TARGET_DOES_NOT_SUPPORT_MANUAL_PUBLICATION');
 
     expect(
+      evaluatePublicationPolicy(baseCandidate('candidate-auto', 'automatic'), {
+        now,
+        targetEnabled: true,
+        manualPublicationEnabled: true
+      }).reason
+    ).toBe('AUTOMATIC_PUBLICATION_DISABLED');
+
+    expect(
       evaluatePublicationPolicy(baseCandidate(), {
         now,
         targetEnabled: true,
@@ -190,6 +198,10 @@ describe('publication template renderer', () => {
     expect(() =>
       renderPublicationTemplate({ ...template(), maxLength: 10 }, publicationContext())
     ).toThrow(TemplateError);
+
+    expect(() =>
+      renderPublicationTemplate({ ...template(), maxLength: 4096 }, publicationContext({ target: target({ maxTextLength: 20 }) }))
+    ).toThrow(TemplateError);
   });
 
   it('rejects empty, unknown and malformed placeholders', () => {
@@ -203,6 +215,17 @@ describe('publication template renderer', () => {
 
     expect(() =>
       renderPublicationTemplate({ ...template(), body: '{{invalid-variable}}' }, publicationContext())
+    ).toThrow(TemplateError);
+
+    expect(() =>
+      renderPublicationTemplate({ ...template(), body: '{{title}}' }, publicationContext())
+    ).toThrow(TemplateError);
+
+    expect(() =>
+      renderPublicationTemplate(template(), {
+        ...publicationContext(),
+        redirectLink: 'https://attacker.example/r/abc123'
+      })
     ).toThrow(TemplateError);
   });
 });
@@ -317,12 +340,15 @@ describe('publication jobs, publisher contract, retry and observability', () => 
       code: 'UNSAFE',
       safeMessage: 'Mensagem segura.',
       category: 'publisher',
-      details: { apiKey: 'secret-key', target: 'target-1' }
+      details: { apiKey: 'secret-key', provider: { headers: { authorization: 'Bearer secret' } }, target: 'target-1' }
     });
 
     expect(event.metadata?.token).toBe('[redacted]');
     expect((event.metadata?.nested as Record<string, unknown>).authorization).toBe('[redacted]');
     expect(error.details?.apiKey).toBe('[redacted]');
+    expect(
+      (((error.details?.provider as Record<string, unknown>).headers as Record<string, unknown>).authorization)
+    ).toBe('[redacted]');
     expect(error.safeMessage).toBe('Mensagem segura.');
   });
 });
@@ -362,6 +388,19 @@ describe('publication pipeline', () => {
     expect(calls).toBe(0);
   });
 
+  it('returns a structured failure when the approved offer is stale', async () => {
+    const output = await runPublicationPipeline(
+      pipelineInput(fakePublisher(successResult()), {
+        approvedOffer: approvedOffer({ approvalDecisionId: 'old-decision' })
+      })
+    );
+
+    expect(output.candidate.status).toBe('blocked');
+    expect(output.policyDecision.reason).toBe('STALE_APPROVAL_DECISION');
+    expect(output.result?.status).toBe('permanent_failure');
+    expect(output.events.map((event) => event.eventName)).toEqual(['PublicationFailed']);
+  });
+
   it('returns permanent template failures without calling the publisher', async () => {
     let calls = 0;
     const output = await runPublicationPipeline(
@@ -370,7 +409,7 @@ describe('publication pipeline', () => {
           calls += 1;
         }),
         {
-          redirectLink: 'https://affiliate.example.com/raw'
+          redirectLink: 'https://radar.example.com/raw'
         }
       )
     );
@@ -400,6 +439,26 @@ describe('publication pipeline', () => {
     expect(output.job?.status).toBe('failed');
     expect(output.retryDecision?.retry).toBe(true);
     expect(output.events.map((event) => event.eventName)).toContain('PublicationRetried');
+  });
+
+  it('preserves top-level retryAfter from publisher results', async () => {
+    const output = await runPublicationPipeline(
+      pipelineInput(
+        fakePublisher({
+          status: 'transient_failure',
+          safeMessage: 'Rate limit.',
+          retryAfter: '2026-06-28T12:10:00.000Z',
+          failure: {
+            category: 'transient',
+            code: 'RATE_LIMIT',
+            safeMessage: 'Rate limit.',
+            retryable: true
+          }
+        })
+      )
+    );
+
+    expect(output.retryDecision?.retryAt).toBe('2026-06-28T12:10:00.000Z');
   });
 
   it('maps transient publisher exceptions to retry decisions', async () => {
@@ -441,6 +500,58 @@ describe('publication pipeline', () => {
     expect(output.job?.status).toBe('paused');
     expect(output.retryDecision?.retry).toBe(false);
     expect(output.retryDecision?.manualReviewRequired).toBe(true);
+  });
+
+  it('requires manual review for ambiguous results without a failure payload', async () => {
+    const output = await runPublicationPipeline(
+      pipelineInput(
+        fakePublisher({
+          status: 'ambiguous',
+          safeMessage: 'Resultado ambiguo.'
+        })
+      )
+    );
+
+    expect(output.job?.status).toBe('paused');
+    expect(output.retryDecision?.retry).toBe(false);
+    expect(output.retryDecision?.manualReviewRequired).toBe(true);
+  });
+
+  it('keeps thrown ambiguous publisher failures paused for reconciliation', async () => {
+    const output = await runPublicationPipeline(
+      pipelineInput({
+        ...fakePublisher(successResult()),
+        publish: () => {
+          throw new PublisherError('Ambiguous send.', {
+            code: 'AMBIGUOUS_SEND',
+            safeMessage: 'Resultado ambiguo.',
+            category: 'ambiguous',
+            retryable: false
+          });
+        }
+      })
+    );
+
+    expect(output.job?.status).toBe('paused');
+    expect(output.result?.status).toBe('ambiguous');
+    expect(output.retryDecision?.manualReviewRequired).toBe(true);
+  });
+
+  it('rejects unsupported message formats before calling the publisher', async () => {
+    let calls = 0;
+    const output = await runPublicationPipeline(
+      pipelineInput(
+        fakePublisher(successResult(), () => {
+          calls += 1;
+        }, ['plain']),
+        {
+          template: template({ format: 'markdown' })
+        }
+      )
+    );
+
+    expect(output.result?.failure?.code).toBe('PUBLISHER_FORMAT_NOT_SUPPORTED');
+    expect(calls).toBe(0);
   });
 });
 
@@ -499,25 +610,33 @@ function template(overrides: Partial<PublicationTemplate> = {}): PublicationTemp
   };
 }
 
-function publicationContext() {
+function publicationContext(overrides: Partial<ReturnType<typeof publicationContextBase>> = {}) {
+  return {
+    ...publicationContextBase(),
+    ...overrides
+  };
+}
+
+function publicationContextBase() {
   return {
     workspaceId: 'workspace-1',
     approvedOfferSnapshot: approvedOffer().snapshot,
     approvalDecisionId: 'decision-current',
     target: target(),
     redirectLink: 'https://radar.example.com/r/abc123',
+    allowedRedirectOrigins: ['https://radar.example.com'],
     generatedAt: now
   };
 }
 
-function baseCandidate(candidateId = 'candidate-1'): PublicationCandidate {
+function baseCandidate(candidateId = 'candidate-1', mode: 'manual' | 'automatic' = 'manual'): PublicationCandidate {
   return createPublicationCandidate({
     approvedOffer: approvedOffer(),
     target: target(),
     candidateId,
     createdBy: 'user-1',
     createdAt: now,
-    mode: 'manual'
+    mode
   });
 }
 
@@ -551,12 +670,12 @@ function successResult(): PublicationResult {
   };
 }
 
-function fakePublisher(result: PublicationResult, onPublish?: () => void): Publisher {
+function fakePublisher(result: PublicationResult, onPublish?: () => void, capabilities = ['markdown']): Publisher {
   return {
     id: 'fake-publisher',
     version: '1.0.0',
     displayName: 'Fake Publisher',
-    capabilities: ['text'],
+    capabilities,
     limits: { maxTextLength: 4096, maxAttempts: 5 },
     publish: () => {
       onPublish?.();
@@ -575,6 +694,7 @@ function pipelineInput(
     template: template(),
     publisher,
     redirectLink: 'https://radar.example.com/r/abc123',
+    allowedRedirectOrigins: ['https://radar.example.com'],
     requestedBy: 'user-1',
     mode: 'manual',
     now,

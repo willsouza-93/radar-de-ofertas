@@ -79,10 +79,20 @@ function sanitizeErrorDetails(details: Record<string, unknown> | undefined): Rec
       sanitized[key] = '[redacted]';
       continue;
     }
-    sanitized[key] = value;
+    sanitized[key] = sanitizeErrorValue(value);
   }
 
   return sanitized;
+}
+
+function sanitizeErrorValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((item) => sanitizeErrorValue(item));
+
+  if (value && typeof value === 'object') {
+    return sanitizeErrorDetails(value as Record<string, unknown>);
+  }
+
+  return value;
 }
 
 function isSensitiveKey(key: string): boolean {

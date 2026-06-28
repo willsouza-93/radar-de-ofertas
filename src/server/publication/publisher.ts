@@ -17,6 +17,15 @@ export function createPublicationRequest(input: {
 }
 
 export function assertPublisherSupportsMessage(publisher: Publisher, message: RenderedMessage): void {
+  if (!supportsMessageFormat(publisher.capabilities, message.format)) {
+    throw new PublisherError('Publisher does not support rendered message format.', {
+      code: 'PUBLISHER_FORMAT_NOT_SUPPORTED',
+      safeMessage: 'Publisher nao suporta o formato da mensagem renderizada.',
+      retryable: false,
+      details: { publisherId: publisher.id, format: message.format }
+    });
+  }
+
   const maxTextLength = publisher.limits.maxTextLength;
   if (maxTextLength !== undefined && message.text.length > maxTextLength) {
     throw new PublisherError('Publisher text length limit exceeded.', {
@@ -26,4 +35,10 @@ export function assertPublisherSupportsMessage(publisher: Publisher, message: Re
       details: { publisherId: publisher.id, maxTextLength }
     });
   }
+}
+
+function supportsMessageFormat(capabilities: readonly string[], format: RenderedMessage['format']): boolean {
+  if (capabilities.includes(format)) return true;
+  if (capabilities.includes(`format:${format}`)) return true;
+  return format === 'plain' && capabilities.includes('text');
 }
