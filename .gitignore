@@ -6,6 +6,7 @@
 # Supabase local runtime
 supabase/.branches/
 supabase/.temp/
+supabase/config.toml
 .supabase/
 
 # Dependencies
