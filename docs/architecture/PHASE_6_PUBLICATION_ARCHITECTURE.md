@@ -83,8 +83,9 @@ Responsabilidades:
 - impedir renderizacao a partir da linha viva de `offers` quando existir
   snapshot/draft aprovado;
 - aplicar `PublicationPolicy`;
-- renderizar template;
-- criar `PublicationJob`;
+- criar `PublicationJob`/publication shell antes de renderizar;
+- criar `redirectLink` associado ao job/publication shell;
+- renderizar template usando o snapshot aprovado e o `redirectLink`;
 - registrar observabilidade;
 - impedir envio direto sem job/idempotencia.
 

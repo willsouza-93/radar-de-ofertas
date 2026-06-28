@@ -15,8 +15,13 @@ Um candidate nasce quando:
 
 - existe oferta aprovada;
 - existe decisao humana valida;
-- a politica de publicacao permite considerar a oferta;
 - existe ao menos um target/canal habilitado para o workspace.
+
+A politica de publicacao nao deve impedir o nascimento do candidate. Ela deve
+ser aplicada depois para marcar o candidate como `eligible` ou `blocked`.
+Assim cooldown, limite por canal e horarios permitidos podem gerar estado
+duravel com motivo e `blockedUntil`, em vez de descartar silenciosamente a
+oportunidade.
 
 Na implementacao futura, o nascimento pode ser:
 
@@ -49,6 +54,8 @@ expired
 ## Transicoes
 
 ```text
+created -> eligible
+created -> blocked
 eligible -> queued
 eligible -> blocked
 eligible -> cancelled

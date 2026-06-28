@@ -71,8 +71,19 @@ Impede criar multiplos jobs equivalentes.
 Chave conceitual:
 
 ```text
-publication:<workspaceId>:<offerId>:<targetId>:<contentVersion>
+publication:<workspaceId>:<offerId>:<targetId>:<approvalDecisionId>:<snapshotVersion>:<slotKey>
 ```
+
+A chave deve incluir o ciclo editorial/publicavel atual. Uma oferta publicada
+no passado pode reentrar em curadoria, ser aprovada novamente e gerar nova
+publicacao legitima. Se a chave usar apenas offer, target e content version, a
+nova tentativa pode ser bloqueada indevidamente como duplicada.
+
+Campos aceitos para diferenciar ciclos:
+
+- `approvalDecisionId` atual;
+- versao/id do snapshot ou draft aprovado;
+- `slotKey` quando houver agendamento/janela de envio.
 
 ### Publicacao manual
 

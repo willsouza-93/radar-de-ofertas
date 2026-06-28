@@ -26,7 +26,7 @@ workspaceId
 offerId
 publicationCandidateId?
 publicationJobId?
-publicationRunId
+publicationRunId?
 publisherId
 targetId
 correlationId
@@ -56,6 +56,14 @@ Identifica uma execucao especifica do pipeline/publication worker.
 
 Um mesmo `correlationId` pode conter varias tentativas; cada execucao deve ter
 `publicationRunId` proprio.
+
+`publicationRunId` e opcional para eventos pre-job/pre-worker, como
+`PublicationRequested`, candidate criado ou candidate bloqueado. Ele passa a ser
+obrigatorio a partir de `PublicationStarted`, quando uma execucao real de job
+existe.
+
+Eventos pre-job devem usar `correlationId` e, quando existir,
+`publicationCandidateId`. Eventos de job devem incluir `publicationJobId`.
 
 ## Structured Logs
 
