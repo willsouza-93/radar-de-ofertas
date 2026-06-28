@@ -194,6 +194,16 @@ export async function runPublicationPipeline(input: PublicationPipelineInput): P
     const publicationError = toPublicationError(error);
     const failedJob = job ? markJobFailed(job, input.now) : null;
     const result = errorToPublicationResult(publicationError);
+    const retryDecision =
+      failedJob && result.failure
+        ? decidePublicationRetry({
+            failure: result.failure,
+            attempt: failedJob.attempt,
+            maxAttempts: input.publisher.limits.maxAttempts ?? 5,
+            now: input.now,
+            idempotencyKey: failedJob.idempotencyKey
+          })
+        : null;
     events.push(
       createPublicationEvent({
         eventName: 'PublicationFailed',
@@ -213,12 +223,33 @@ export async function runPublicationPipeline(input: PublicationPipelineInput): P
       })
     );
 
+    if (retryDecision?.retry) {
+      events.push(
+        createPublicationEvent({
+          eventName: 'PublicationRetried',
+          workspaceId: activeCandidate.workspaceId,
+          offerId: activeCandidate.offerId,
+          publicationCandidateId: activeCandidate.id,
+          publicationJobId: failedJob?.id,
+          publicationRunId: failedJob?.publicationRunId,
+          publisherId: input.publisher.id,
+          targetId: activeCandidate.target.id,
+          correlationId: input.correlationId,
+          idempotencyKey: activeCandidate.idempotencyKey,
+          status: 'retry_scheduled',
+          safeMessage: retryDecision.safeMessage,
+          createdAt: input.now,
+          metadata: { retryAt: retryDecision.retryAt, reason: retryDecision.reason }
+        })
+      );
+    }
+
     return {
       candidate: activeCandidate,
       policyDecision,
       job: failedJob,
       result,
-      retryDecision: null,
+      retryDecision,
       events
     };
   }

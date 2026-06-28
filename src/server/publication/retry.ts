@@ -29,6 +29,16 @@ export function decidePublicationRetry(input: {
     };
   }
 
+  if (input.failure.category !== 'transient') {
+    return {
+      retry: false,
+      terminal: true,
+      manualReviewRequired: false,
+      reason: 'NON_TRANSIENT_FAILURE',
+      safeMessage: input.failure.safeMessage
+    };
+  }
+
   if (!input.idempotencyKey) {
     return {
       retry: false,

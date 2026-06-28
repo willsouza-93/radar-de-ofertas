@@ -14,6 +14,7 @@ import {
   markCandidateEligible,
   PolicyError,
   PublicationError,
+  PublisherError,
   queuePublicationCandidate,
   renderPublicationTemplate,
   runPublicationPipeline,
@@ -123,6 +124,14 @@ describe('publication policy', () => {
     ).toBe('MANUAL_PUBLICATION_DISABLED');
 
     expect(
+      evaluatePublicationPolicy(baseCandidateWithTarget(target({ supportsManualPublication: false })), {
+        now,
+        targetEnabled: true,
+        manualPublicationEnabled: true
+      }).reason
+    ).toBe('TARGET_DOES_NOT_SUPPORT_MANUAL_PUBLICATION');
+
+    expect(
       evaluatePublicationPolicy(baseCandidate(), {
         now,
         targetEnabled: true,
@@ -180,6 +189,20 @@ describe('publication template renderer', () => {
 
     expect(() =>
       renderPublicationTemplate({ ...template(), maxLength: 10 }, publicationContext())
+    ).toThrow(TemplateError);
+  });
+
+  it('rejects empty, unknown and malformed placeholders', () => {
+    expect(() =>
+      renderPublicationTemplate({ ...template(), body: '   ' }, publicationContext())
+    ).toThrow(TemplateError);
+
+    expect(() =>
+      renderPublicationTemplate({ ...template(), body: '{{unknownVariable}}' }, publicationContext())
+    ).toThrow(TemplateError);
+
+    expect(() =>
+      renderPublicationTemplate({ ...template(), body: '{{invalid-variable}}' }, publicationContext())
     ).toThrow(TemplateError);
   });
 });
@@ -248,6 +271,38 @@ describe('publication jobs, publisher contract, retry and observability', () => 
     expect(ambiguous.manualReviewRequired).toBe(true);
   });
 
+  it('does not retry non-transient retryable failures or failures after max attempts', () => {
+    const nonTransient = decidePublicationRetry({
+      failure: {
+        category: 'publisher',
+        code: 'PUBLISHER_CONTRACT_ERROR',
+        safeMessage: 'Falha de contrato do publisher.',
+        retryable: true
+      },
+      attempt: 1,
+      maxAttempts: 5,
+      now,
+      idempotencyKey: 'key-1'
+    });
+    const maxAttempts = decidePublicationRetry({
+      failure: {
+        category: 'transient',
+        code: 'PROVIDER_TIMEOUT',
+        safeMessage: 'Timeout.',
+        retryable: true
+      },
+      attempt: 5,
+      maxAttempts: 5,
+      now,
+      idempotencyKey: 'key-1'
+    });
+
+    expect(nonTransient.retry).toBe(false);
+    expect(nonTransient.reason).toBe('NON_TRANSIENT_FAILURE');
+    expect(maxAttempts.retry).toBe(false);
+    expect(maxAttempts.reason).toBe('MAX_ATTEMPTS_REACHED');
+  });
+
   it('sanitizes sensitive metadata and error details', () => {
     const event = createPublicationEvent({
       eventName: 'PublicationFailed',
@@ -256,7 +311,7 @@ describe('publication jobs, publisher contract, retry and observability', () => 
       status: 'failed',
       safeMessage: 'Falha segura.',
       createdAt: now,
-      metadata: { token: 'secret-token', channel: 'generic' }
+      metadata: { token: 'secret-token', channel: 'generic', nested: { authorization: 'Bearer secret' } }
     });
     const error = new PublicationError('Unsafe internals.', {
       code: 'UNSAFE',
@@ -266,6 +321,7 @@ describe('publication jobs, publisher contract, retry and observability', () => 
     });
 
     expect(event.metadata?.token).toBe('[redacted]');
+    expect((event.metadata?.nested as Record<string, unknown>).authorization).toBe('[redacted]');
     expect(error.details?.apiKey).toBe('[redacted]');
     expect(error.safeMessage).toBe('Mensagem segura.');
   });
@@ -342,6 +398,26 @@ describe('publication pipeline', () => {
     );
 
     expect(output.job?.status).toBe('failed');
+    expect(output.retryDecision?.retry).toBe(true);
+    expect(output.events.map((event) => event.eventName)).toContain('PublicationRetried');
+  });
+
+  it('maps transient publisher exceptions to retry decisions', async () => {
+    const output = await runPublicationPipeline(
+      pipelineInput({
+        ...fakePublisher(successResult()),
+        publish: () => {
+          throw new PublisherError('Provider timeout.', {
+            code: 'PROVIDER_TIMEOUT',
+            safeMessage: 'Canal temporariamente indisponivel.',
+            category: 'transient',
+            retryable: true
+          });
+        }
+      })
+    );
+
+    expect(output.result?.status).toBe('transient_failure');
     expect(output.retryDecision?.retry).toBe(true);
     expect(output.events.map((event) => event.eventName)).toContain('PublicationRetried');
   });
@@ -439,6 +515,17 @@ function baseCandidate(candidateId = 'candidate-1'): PublicationCandidate {
     approvedOffer: approvedOffer(),
     target: target(),
     candidateId,
+    createdBy: 'user-1',
+    createdAt: now,
+    mode: 'manual'
+  });
+}
+
+function baseCandidateWithTarget(candidateTarget: PublicationTarget): PublicationCandidate {
+  return createPublicationCandidate({
+    approvedOffer: approvedOffer(),
+    target: candidateTarget,
+    candidateId: 'candidate-target',
     createdBy: 'user-1',
     createdAt: now,
     mode: 'manual'

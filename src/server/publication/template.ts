@@ -8,8 +8,21 @@ export function renderPublicationTemplate(
   context: PublicationContext
 ): RenderedMessage {
   validateRedirectLink(context.redirectLink);
+  validateTemplateShape(template);
 
   const variables = buildTemplateVariables(context);
+  const placeholders = extractPlaceholders(template.body);
+  for (const placeholder of placeholders) {
+    if (!(placeholder in variables)) {
+      throw new TemplateError('Unknown template variable.', {
+        code: 'TEMPLATE_VARIABLE_UNKNOWN',
+        safeMessage: 'Template possui variavel desconhecida.',
+        retryable: false,
+        details: { variable: placeholder }
+      });
+    }
+  }
+
   for (const required of template.requiredVariables) {
     const value = variables[required];
     if (value === undefined || value === null || value === '') {
@@ -26,6 +39,14 @@ export function renderPublicationTemplate(
     const value = variables[variableName];
     return escapeForFormat(String(value ?? fallbackForVariable(variableName)), template.format);
   });
+
+  if (/\{\{|\}\}/.test(text)) {
+    throw new TemplateError('Malformed template placeholder.', {
+      code: 'TEMPLATE_PLACEHOLDER_INVALID',
+      safeMessage: 'Template possui placeholder invalido.',
+      retryable: false
+    });
+  }
 
   const minLength = template.minLength ?? 1;
   const maxLength = template.maxLength ?? context.target.maxTextLength ?? 4096;
@@ -60,6 +81,31 @@ export function renderPublicationTemplate(
       snapshotVersion: context.approvedOfferSnapshot.version
     }
   };
+}
+
+function validateTemplateShape(template: PublicationTemplate): void {
+  if (template.body.trim().length === 0) {
+    throw new TemplateError('Template body is empty.', {
+      code: 'TEMPLATE_BODY_EMPTY',
+      safeMessage: 'Template nao pode estar vazio.',
+      retryable: false
+    });
+  }
+
+  for (const required of template.requiredVariables) {
+    if (!/^[a-zA-Z0-9_.]+$/.test(required)) {
+      throw new TemplateError('Required template variable is invalid.', {
+        code: 'TEMPLATE_REQUIRED_VARIABLE_INVALID',
+        safeMessage: 'Template possui variavel obrigatoria invalida.',
+        retryable: false,
+        details: { variable: required }
+      });
+    }
+  }
+}
+
+function extractPlaceholders(templateBody: string): string[] {
+  return [...templateBody.matchAll(VARIABLE_PATTERN)].map((match) => match[1] ?? '');
 }
 
 export function buildPublicationContext(input: PublicationContext): PublicationContext {

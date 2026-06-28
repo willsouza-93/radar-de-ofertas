@@ -160,3 +160,19 @@ Supabase, staging, producao, publisher real, scheduler ou integracoes externas.
 - Nao ha feature flags reais.
 - Nao ha permissao/RBAC nesta camada porque o dominio e puro; validacao de
   ator ficara na camada de aplicacao futura.
+
+## Review Fase 6B
+
+- Endurecida validacao do template renderer para rejeitar:
+  - template vazio;
+  - variavel obrigatoria invalida;
+  - placeholder desconhecido;
+  - placeholder malformado.
+- Endurecida policy de publicacao manual para respeitar targets que declaram
+  `supportsManualPublication = false`.
+- Endurecida estrategia de retry para repetir apenas falhas classificadas como
+  `transient`; falhas retryable de outras categorias nao geram retry automatico.
+- Pipeline passou a calcular `RetryDecision` tambem quando o publisher lanca
+  excecao transitoria segura.
+- Observabilidade passou a sanitizar metadata aninhada.
+- Testes unitarios ampliados para cobrir edge cases encontrados no review.

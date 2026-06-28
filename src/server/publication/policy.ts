@@ -16,6 +16,10 @@ export function evaluatePublicationPolicy(
     return block('MANUAL_PUBLICATION_DISABLED', 'Publicacao manual esta desabilitada para este contexto.');
   }
 
+  if (candidate.mode === 'manual' && candidate.target.supportsManualPublication === false) {
+    return block('TARGET_DOES_NOT_SUPPORT_MANUAL_PUBLICATION', 'O destino nao suporta publicacao manual.');
+  }
+
   if (context.existingIdempotencyKeys?.has(candidate.idempotencyKey)) {
     return skip('DUPLICATE_PUBLICATION', 'Ja existe publicacao equivalente para este ciclo editorial.');
   }

@@ -51,10 +51,20 @@ export function sanitizeMetadata(metadata: Record<string, unknown> | undefined):
       continue;
     }
 
-    sanitized[key] = value;
+    sanitized[key] = sanitizeMetadataValue(value);
   }
 
   return sanitized;
+}
+
+function sanitizeMetadataValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((item) => sanitizeMetadataValue(item));
+
+  if (value && typeof value === 'object') {
+    return sanitizeMetadata(value as Record<string, unknown>);
+  }
+
+  return value;
 }
 
 function isSensitiveKey(key: string): boolean {

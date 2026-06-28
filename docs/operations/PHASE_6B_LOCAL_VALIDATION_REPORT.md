@@ -95,13 +95,22 @@ Cenarios cobertos:
 - pipeline com falha permanente de template;
 - pipeline com falha transitoria;
 - pipeline com resultado ambiguo.
+- review Fase 6B:
+  - template vazio;
+  - placeholder desconhecido;
+  - placeholder malformado;
+  - target sem suporte a publicacao manual;
+  - falha retryable nao transitoria;
+  - limite maximo de retry;
+  - publisher lancando excecao transitoria;
+  - metadata sensivel aninhada.
 
 ## Validacoes locais
 
 | Comando | Resultado |
 | --- | --- |
 | `npm.cmd run typecheck` | Passou |
-| `npm.cmd test` | Passou: 17 arquivos de teste, 128 testes |
+| `npm.cmd test` | Passou: 17 arquivos de teste, 131 testes |
 | `npm.cmd run build` | Passou |
 | `git diff --check` | Passou |
 
