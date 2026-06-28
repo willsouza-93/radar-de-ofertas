@@ -44,8 +44,24 @@ Pode virar retry:
 - timeout;
 - 429;
 - 5xx;
-- erro de rede;
-- resposta ambigua.
+- erro de rede.
+
+### Resultado ambiguo
+
+Nao deve virar retry automatico quando ha chance de o canal ter aceitado o
+envio, mas a resposta foi perdida antes de salvar `externalMessageId`.
+
+Exemplo:
+
+- resposta ambigua apos chamada externa.
+
+Tratamento esperado:
+
+- pausar o job;
+- registrar falha ambigua;
+- tentar reconciliacao segura se o canal permitir consulta;
+- se nao for possivel confirmar, enviar para revisao manual de Admin;
+- nunca reenviar automaticamente por backoff.
 
 ### Erro permanente
 
@@ -83,4 +99,6 @@ Exemplos:
 ## Escalonamento
 
 Falhas permanentes devem ficar visiveis para Admin. Falhas transitorias devem
-registrar retry e so virar alerta humano apos limite de tentativas.
+registrar retry e so virar alerta humano apos limite de tentativas. Resultados
+ambiguos ficam fora do retry automatico e entram em pausa/reconciliacao/revisao
+manual.
