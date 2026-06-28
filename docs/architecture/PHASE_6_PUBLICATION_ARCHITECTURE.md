@@ -51,7 +51,14 @@ existir evidencia consistente:
 
 - `approval_queue.status = approved`;
 - `approval_decisions.decision = approved`;
-- offer, queue e decision pertencem ao mesmo workspace.
+- `approval_queue.last_decision_id = approval_decisions.id`;
+- offer, queue e decision pertencem ao mesmo workspace;
+- decision referencia a mesma queue e a mesma offer.
+
+Essa validacao deve usar a decisao terminal atual da fila, nao apenas procurar
+qualquer approval antigo no historico. Como a reentrada editorial preserva
+`approval_decisions` antigos, uma query futura da Fase 6B nao pode considerar
+decisao aprovada stale como autorizacao de publicacao.
 
 ### Publication Candidate
 
@@ -59,7 +66,8 @@ Representa uma oportunidade de publicacao derivada de uma oferta aprovada.
 
 Responsabilidades:
 
-- referenciar a oferta aprovada;
+- referenciar a oferta aprovada e a decisao terminal atual;
+- apontar para um snapshot/draft aprovado e imutavel do conteudo de publicacao;
 - declarar canal/target desejado;
 - carregar prioridade e contexto editorial;
 - bloquear duplicidade antes de criar job.
@@ -71,6 +79,9 @@ Orquestra a preparacao da publicacao.
 Responsabilidades:
 
 - validar se a oferta ainda esta aprovada;
+- validar se a decision usada ainda e `approval_queue.last_decision_id`;
+- impedir renderizacao a partir da linha viva de `offers` quando existir
+  snapshot/draft aprovado;
 - aplicar `PublicationPolicy`;
 - renderizar template;
 - criar `PublicationJob`;

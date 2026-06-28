@@ -63,13 +63,20 @@ RenderedMessage
 ```text
 PublicationContext
   workspace
-  offer
-  approval
+  approvedOfferSnapshot
+  approvalDecision
   target
-  affiliateUrl
-  shortLink?
+  redirectLink
   generatedAt
 ```
+
+`approvedOfferSnapshot` representa a versao imutavel aprovada para publicacao.
+O renderer nao deve ler diretamente a linha viva de `offers`, porque novas
+capturas podem atualizar preco, cupom, frete ou link depois da aprovacao.
+
+`redirectLink` e obrigatorio para mensagens enviaveis e deve apontar para
+`/r/{shortCode}`. Publicar `affiliateUrl` bruto fica bloqueado para evitar
+bypass de analytics e `click_events`.
 
 ## Regras
 
@@ -78,6 +85,10 @@ PublicationContext
 - Publisher nao deve alterar texto.
 - Falha de template deve ocorrer antes de criar tentativa externa.
 - Dados ausentes devem gerar fallback claro ou erro permanente.
+- Mensagem enviavel exige `redirectLink`; sem ele, o renderer retorna erro
+  permanente antes de chamar publisher.
+- Preco, cupom, frete, link e texto devem vir do snapshot/draft aprovado, nao
+  da oferta mutavel.
 
 ## Seguranca
 
@@ -85,6 +96,7 @@ PublicationContext
 - Nao inserir secrets em template.
 - Nao renderizar payload bruto de integracoes.
 - Validar HTTP/HTTPS para links.
+- Validar que `redirectLink` usa rota publica controlada `/r/{shortCode}`.
 
 ## Fora da Fase 6A
 

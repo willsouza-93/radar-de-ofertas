@@ -16,8 +16,23 @@ Podem ser tentados novamente:
 - timeout;
 - rate limit;
 - erro 5xx do provedor;
-- rede instavel;
-- resposta ambigua sem external id.
+- rede instavel.
+
+### Ambiguos
+
+Nao devem virar retry automatico quando existe chance de o provedor ter aceito
+o envio, mas a resposta se perdeu antes de salvar `externalMessageId`.
+
+Exemplo:
+
+- resposta ambigua sem external id apos chamada externa.
+
+Resultado esperado:
+
+- pausar job;
+- registrar falha ambigua;
+- tentar reconciliacao segura quando o canal permitir consulta;
+- caso nao seja possivel confirmar, enviar para revisao manual de Admin.
 
 ### Permanentes
 
@@ -57,6 +72,7 @@ Regras:
 - nao reenviar cegamente quando houve timeout apos chamada externa;
 - salvar `externalMessageId` assim que conhecido;
 - tratar resposta duplicada como sucesso idempotente quando seguro;
+- resposta ambigua sem confirmacao nao agenda backoff automatico;
 - nunca criar duas mensagens para a mesma chave sem decisao humana.
 
 ## Resultado de retry
