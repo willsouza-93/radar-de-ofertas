@@ -1,7 +1,9 @@
 # Engineering Guidelines
 
-Status: guia operacional permanente para novas implementacoes e novas sessoes
-Codex.
+Status: documento vivo. Este guia deve refletir sempre o processo atual da
+`main` para novas implementacoes e novas sessoes Codex.
+
+Politica: [LIVING_DOCUMENTATION_POLICY.md](LIVING_DOCUMENTATION_POLICY.md)
 
 ## Estrategia de branches
 
@@ -46,6 +48,19 @@ Codex.
   - `fix: address publication domain review comments`;
   - `docs: add codex engineering handoff`.
 - Evitar commits que misturem documentacao ampla, schema e UI sem motivo.
+
+## Fluxo oficial
+
+```text
+Implementacao
+  -> Self Review
+  -> Pre-Commit Review Gate
+  -> Living Documentation Gate
+  -> Cleanup Gate
+  -> Commit
+  -> Push
+  -> PR
+```
 
 ## Validacoes obrigatorias
 
@@ -208,6 +223,33 @@ NENHUM ou listar
 LEFTOVER_CONTAINERS:
 NENHUM ou listar
 ```
+
+## Living Documentation Gate
+
+Antes de criar qualquer commit, avaliar obrigatoriamente se algum documento em:
+
+```text
+docs/project/
+```
+
+precisa ser atualizado.
+
+Caso alguma mudanca arquitetural, funcional, operacional, de processo ou de
+engenharia torne qualquer documento permanente desatualizado, ele deve ser
+atualizado antes do commit.
+
+Checklist:
+
+- [ ] `PROJECT_STATE.md` continua correto?
+- [ ] `CODEX_PROJECT_CONTEXT.md` continua correto?
+- [ ] `ARCHITECTURE_PRINCIPLES.md` precisa de nova regra?
+- [ ] `ENGINEERING_GUIDELINES.md` precisa de novo processo?
+- [ ] `CODEX_HANDOFF.md` continua orientando novas sessoes?
+- [ ] `PROJECT_GLOSSARY.md` precisa de novo termo?
+- [ ] `DECISION_INDEX.md` aponta para a decisao certa?
+
+Se nenhuma atualizacao for necessaria, registrar isso no resumo final quando a
+tarefa pedir relatorio detalhado.
 
 ## Politica de secrets
 

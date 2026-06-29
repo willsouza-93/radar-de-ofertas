@@ -1,7 +1,10 @@
 # Decision Index
 
-Status: indice de decisoes arquiteturais. Nao move documentos e nao substitui
+Status: documento vivo. Este indice deve apontar sempre para as decisoes
+arquiteturais atuais da `main`. Nao move documentos e nao substitui
 ADRs/especificacoes.
+
+Politica: [LIVING_DOCUMENTATION_POLICY.md](LIVING_DOCUMENTATION_POLICY.md)
 
 ## Produto e papeis
 

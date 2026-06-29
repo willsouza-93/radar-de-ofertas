@@ -1,24 +1,32 @@
-# Codex Handoff v0.6
+# Codex Handoff
 
-Status: handoff para novas sessoes Codex apos Fase 6B.
+Status: documento vivo. Representa sempre o estado atual da `main`, nao a fase
+em que foi criado.
+
+Este documento substitui `CODEX_HANDOFF_v0.6.md`. A decisao foi manter apenas
+um handoff vivo para evitar leitura acidental de snapshot antigo; historico fica
+preservado em Git, PRs e tags.
 
 ## Para o novo Codex
 
-Se voce e um novo Codex entrando neste projeto, leia estes documentos antes de
-iniciar qualquer implementacao:
+Se voce e um novo Codex entrando neste projeto, leia obrigatoriamente estes
+documentos antes de iniciar qualquer implementacao:
 
 1. [README.md](../../README.md)
-2. [CODEX_PROJECT_CONTEXT.md](CODEX_PROJECT_CONTEXT.md)
-3. [ARCHITECTURE_PRINCIPLES.md](ARCHITECTURE_PRINCIPLES.md)
-4. [ENGINEERING_GUIDELINES.md](ENGINEERING_GUIDELINES.md)
-5. [DECISION_INDEX.md](DECISION_INDEX.md)
-6. [PROJECT_GLOSSARY.md](PROJECT_GLOSSARY.md)
-7. [CHANGELOG_FASE_6.md](../architecture/CHANGELOG_FASE_6.md)
-8. [PHASE_6_ROADMAP.md](../architecture/PHASE_6_ROADMAP.md)
-9. [PHASE_5_ROADMAP.md](../architecture/PHASE_5_ROADMAP.md)
-10. Documentos da fase atual solicitada pelo usuario.
+2. [PROJECT_STATE.md](PROJECT_STATE.md)
+3. [CODEX_PROJECT_CONTEXT.md](CODEX_PROJECT_CONTEXT.md)
+4. [ARCHITECTURE_PRINCIPLES.md](ARCHITECTURE_PRINCIPLES.md)
+5. [ENGINEERING_GUIDELINES.md](ENGINEERING_GUIDELINES.md)
+6. [CODEX_HANDOFF.md](CODEX_HANDOFF.md)
+7. [DECISION_INDEX.md](DECISION_INDEX.md)
+8. [PROJECT_GLOSSARY.md](PROJECT_GLOSSARY.md)
+9. Documentacao especifica da fase solicitada pelo usuario.
 
-## Principais entregas ate v0.6
+A documentacao permanente em `docs/project/` prevalece sobre historico de
+conversa quando houver conflito. Se ela estiver desatualizada, corrija-a no
+mesmo PR da mudanca que revelou a inconsistencia.
+
+## Principais entregas atuais
 
 - Produto e UX aprovados.
 - Arquitetura MVP-first consolidada.

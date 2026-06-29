@@ -1,7 +1,10 @@
 # Architecture Principles
 
-Status: constituicao arquitetural do Radar de Ofertas. Toda nova fase deve
-respeitar estes principios antes de propor codigo, migrations ou integracoes.
+Status: documento vivo. Esta constituicao arquitetural deve refletir sempre o
+estado mais recente da `main`. Toda nova fase deve respeitar estes principios
+antes de propor codigo, migrations ou integracoes.
+
+Politica: [LIVING_DOCUMENTATION_POLICY.md](LIVING_DOCUMENTATION_POLICY.md)
 
 ## Principios centrais
 

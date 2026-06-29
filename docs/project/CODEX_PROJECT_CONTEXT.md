@@ -1,8 +1,10 @@
 # Codex Project Context
 
-Status: onboarding permanente para novas sessoes Codex. Este documento resume o
-projeto e aponta para as fontes oficiais. Ele nao substitui os documentos de
-produto, arquitetura, decisoes e operacoes.
+Status: documento vivo. Este documento deve refletir sempre o estado mais
+recente da `main`. Ele resume o projeto e aponta para as fontes oficiais, sem
+substituir os documentos de produto, arquitetura, decisoes e operacoes.
+
+Politica: [LIVING_DOCUMENTATION_POLICY.md](LIVING_DOCUMENTATION_POLICY.md)
 
 ## Visao geral
 

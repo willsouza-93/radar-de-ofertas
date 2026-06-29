@@ -1,6 +1,9 @@
 # Project Glossary
 
-Status: glossario permanente do Radar de Ofertas.
+Status: documento vivo. Este glossario deve refletir sempre a linguagem atual
+da `main`.
+
+Politica: [LIVING_DOCUMENTATION_POLICY.md](LIVING_DOCUMENTATION_POLICY.md)
 
 ## Admin
 
