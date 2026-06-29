@@ -85,6 +85,17 @@ describe('publication domain candidate', () => {
     const expired = expirePublicationCandidate(markCandidateEligible(baseCandidate('candidate-2'), now), now);
     const blocked = blockPublicationCandidate(baseCandidate('candidate-3'), blockDecision(), now);
     const stillBlocked = blockPublicationCandidate(blocked, blockDecision(), now);
+    const indefinitelyBlocked = blockPublicationCandidate(
+      blocked,
+      {
+        allowed: false,
+        action: 'block',
+        reason: 'TARGET_DISABLED',
+        safeMessage: 'Destino desabilitado.',
+        warnings: []
+      },
+      now
+    );
 
     expect(eligible.status).toBe('eligible');
     expect(queued.status).toBe('queued');
@@ -93,6 +104,8 @@ describe('publication domain candidate', () => {
     expect(blocked.status).toBe('blocked');
     expect(blocked.blockedReason).toBe('COOLDOWN_ACTIVE');
     expect(stillBlocked.status).toBe('blocked');
+    expect(indefinitelyBlocked.blockedReason).toBe('TARGET_DISABLED');
+    expect(indefinitelyBlocked.blockedUntil).toBeUndefined();
   });
 });
 
@@ -213,6 +226,14 @@ describe('publication template renderer', () => {
 
     expect(() =>
       renderPublicationTemplate({ ...template(), body: '{{unknownVariable}}' }, publicationContext())
+    ).toThrow(TemplateError);
+
+    expect(() =>
+      renderPublicationTemplate({ ...template(), body: '{{sourceUrl}} {{redirectLink}}' }, publicationContext())
+    ).toThrow(TemplateError);
+
+    expect(() =>
+      renderPublicationTemplate({ ...template(), body: '{{constructor}} {{redirectLink}}' }, publicationContext())
     ).toThrow(TemplateError);
 
     expect(() =>
@@ -403,6 +424,27 @@ describe('publication pipeline', () => {
     expect(output.events.map((event) => event.eventName)).not.toContain('PublicationRetried');
   });
 
+  it('does not schedule retries for permanent results with retryable transient failure details', async () => {
+    const output = await runPublicationPipeline(
+      pipelineInput(
+        fakePublisher({
+          status: 'permanent_failure',
+          safeMessage: 'Falha permanente.',
+          failure: {
+            category: 'transient',
+            code: 'INCONSISTENT_TRANSIENT',
+            safeMessage: 'Falha transitoria inconsistente.',
+            retryable: true
+          }
+        })
+      )
+    );
+
+    expect(output.job?.status).toBe('failed');
+    expect(output.retryDecision).toBeNull();
+    expect(output.events.map((event) => event.eventName)).not.toContain('PublicationRetried');
+  });
+
   it('blocks target disabled before rendering or publisher calls', async () => {
     let calls = 0;
     const output = await runPublicationPipeline(
@@ -530,6 +572,26 @@ describe('publication pipeline', () => {
     expect(output.result?.status).toBe('transient_failure');
     expect(output.retryDecision?.retry).toBe(true);
     expect(output.events.map((event) => event.eventName)).toContain('PublicationRetried');
+  });
+
+  it('preserves retryAfter from thrown transient publisher errors', async () => {
+    const output = await runPublicationPipeline(
+      pipelineInput({
+        ...fakePublisher(successResult()),
+        publish: () => {
+          throw new PublisherError('Provider rate limit.', {
+            code: 'RATE_LIMIT',
+            safeMessage: 'Rate limit.',
+            category: 'transient',
+            retryable: true,
+            retryAfter: '2026-06-28T12:20:00.000Z'
+          });
+        }
+      })
+    );
+
+    expect(output.result?.retryAfter).toBe('2026-06-28T12:20:00.000Z');
+    expect(output.retryDecision?.retryAt).toBe('2026-06-28T12:20:00.000Z');
   });
 
   it('does not retry ambiguous publisher results automatically', async () => {

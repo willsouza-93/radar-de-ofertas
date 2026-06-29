@@ -13,7 +13,7 @@ export function renderPublicationTemplate(
   const variables = buildTemplateVariables(context);
   const placeholders = extractPlaceholders(template.body);
   for (const placeholder of placeholders) {
-    if (!(placeholder in variables)) {
+    if (!Object.hasOwn(variables, placeholder)) {
       throw new TemplateError('Unknown template variable.', {
         code: 'TEMPLATE_VARIABLE_UNKNOWN',
         safeMessage: 'Template possui variavel desconhecida.',
@@ -142,7 +142,6 @@ function buildTemplateVariables(context: PublicationContext): Record<string, str
         ? null
         : `${snapshot.commissionPercent}%`,
     highlights: snapshot.highlights?.join(', ') ?? null,
-    sourceUrl: snapshot.sourceUrl,
     redirectLink: context.redirectLink,
     targetLabel: context.target.destinationLabel ?? context.target.destinationId
   };

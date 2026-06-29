@@ -66,8 +66,9 @@ export function blockPublicationCandidate(
   now: string
 ): PublicationCandidate {
   ensureCandidateCanTransition(candidate.status, 'blocked');
+  const { blockedUntil: _blockedUntil, ...candidateWithoutBlockWindow } = candidate;
   const blockedCandidate: PublicationCandidate = {
-    ...candidate,
+    ...candidateWithoutBlockWindow,
     status: 'blocked',
     blockedReason: decision.reason,
     safeMessage: decision.safeMessage,

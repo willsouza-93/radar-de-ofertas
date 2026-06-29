@@ -192,8 +192,18 @@ Supabase, staging, producao, publisher real, scheduler ou integracoes externas.
   payload `failure`, preservando `retryAfter` quando existir.
 - Pipeline passou a ignorar payload `failure` inconsistente quando o status do
   publisher e `success`, evitando retry de mensagem ja registrada como sucesso.
+- Pipeline passou a bloquear retry quando o status normalizado e
+  `permanent_failure`, mesmo se o payload `failure` vier inconsistentemente
+  marcado como retryable/transient.
+- Pipeline passou a preservar `retryAfter` em excecoes transitorias lancadas
+  pelo publisher.
 - Candidate passou a permitir reavaliacao `blocked -> blocked`, preservando o
   estado bloqueado quando a mesma politica continua ativa.
+- Candidate passou a limpar `blockedUntil` antigo quando uma reavaliacao gera
+  novo bloqueio sem janela de expiracao.
+- Renderer deixou de expor `sourceUrl` bruto como variavel de template.
+- Renderer passou a rejeitar nomes de placeholders herdados de prototype, como
+  `constructor`.
 - Sanitizacao de erros e observabilidade passou a lidar com referencias
   circulares sem quebrar a construcao de falhas seguras.
 - Testes unitarios ampliados para cobrir edge cases encontrados no review.

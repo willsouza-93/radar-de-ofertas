@@ -5,6 +5,7 @@ export interface PublicationErrorOptions {
   safeMessage: string;
   category: PublicationFailureCategory;
   retryable?: boolean;
+  retryAfter?: string;
   details?: Record<string, unknown>;
   cause?: unknown;
 }
@@ -14,6 +15,7 @@ export class PublicationError extends Error {
   readonly safeMessage: string;
   readonly category: PublicationFailureCategory;
   readonly retryable: boolean;
+  readonly retryAfter: string | undefined;
   readonly details: Record<string, unknown> | undefined;
   override readonly cause?: unknown;
 
@@ -24,6 +26,7 @@ export class PublicationError extends Error {
     this.safeMessage = options.safeMessage;
     this.category = options.category;
     this.retryable = options.retryable ?? false;
+    this.retryAfter = options.retryAfter;
     this.details = sanitizeErrorDetails(options.details);
     this.cause = options.cause;
   }

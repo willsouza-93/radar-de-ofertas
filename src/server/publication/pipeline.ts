@@ -325,20 +325,18 @@ function failureForRetryFromResult(result: PublicationResult): PublicationFailur
     };
   }
 
+  if (result.status !== 'transient_failure') return null;
+
   if (result.failure) return normalizeFailureForRetry(result.failure, result);
 
-  if (result.status === 'transient_failure') {
-    const failure: PublicationFailure = {
-      category: 'transient',
-      code: 'TRANSIENT_PUBLICATION_RESULT',
-      safeMessage: result.safeMessage,
-      retryable: true
-    };
-    if (result.retryAfter !== undefined) failure.retryAfter = result.retryAfter;
-    return failure;
-  }
-
-  return null;
+  const failure: PublicationFailure = {
+    category: 'transient',
+    code: 'TRANSIENT_PUBLICATION_RESULT',
+    safeMessage: result.safeMessage,
+    retryable: true
+  };
+  if (result.retryAfter !== undefined) failure.retryAfter = result.retryAfter;
+  return failure;
 }
 
 function errorToPublicationResult(error: {
@@ -346,30 +344,41 @@ function errorToPublicationResult(error: {
   code: string;
   safeMessage: string;
   retryable: boolean;
+  retryAfter: string | undefined;
 }): PublicationResult {
   if (error.category === 'ambiguous') {
+    const ambiguousFailure: PublicationFailure = {
+      category: 'ambiguous',
+      code: error.code,
+      safeMessage: error.safeMessage,
+      retryable: false
+    };
+    if (error.retryAfter !== undefined) ambiguousFailure.retryAfter = error.retryAfter;
+
     return {
       status: 'ambiguous',
       safeMessage: error.safeMessage,
-      failure: {
-        category: 'ambiguous',
-        code: error.code,
-        safeMessage: error.safeMessage,
-        retryable: false
-      }
+      failure: ambiguousFailure
     };
   }
 
-  return {
+  const failure: PublicationFailure = {
+    category: error.category,
+    code: error.code,
+    safeMessage: error.safeMessage,
+    retryable: error.retryable
+  };
+  if (error.retryAfter !== undefined) failure.retryAfter = error.retryAfter;
+
+  const result: PublicationResult = {
     status: error.retryable ? 'transient_failure' : 'permanent_failure',
     safeMessage: error.safeMessage,
-    failure: {
-      category: error.category,
-      code: error.code,
-      safeMessage: error.safeMessage,
-      retryable: error.retryable
-    }
+    failure
   };
+
+  if (error.retryAfter !== undefined) result.retryAfter = error.retryAfter;
+
+  return result;
 }
 
 function createInvalidCandidatePlaceholder(input: PublicationPipelineInput): PublicationCandidate {
