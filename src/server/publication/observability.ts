@@ -43,25 +43,38 @@ export function createPublicationEvent(input: {
 
 export function sanitizeMetadata(metadata: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   if (!metadata) return undefined;
+  return sanitizeMetadataRecord(metadata, new WeakSet<object>());
+}
 
+function sanitizeMetadataRecord(
+  metadata: Record<string, unknown>,
+  seen: WeakSet<object>
+): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {};
+  seen.add(metadata);
+
   for (const [key, value] of Object.entries(metadata)) {
     if (isSensitiveKey(key)) {
       sanitized[key] = '[redacted]';
       continue;
     }
 
-    sanitized[key] = sanitizeMetadataValue(value);
+    sanitized[key] = sanitizeMetadataValue(value, seen);
   }
 
   return sanitized;
 }
 
-function sanitizeMetadataValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map((item) => sanitizeMetadataValue(item));
+function sanitizeMetadataValue(value: unknown, seen: WeakSet<object>): unknown {
+  if (Array.isArray(value)) {
+    if (seen.has(value)) return '[circular]';
+    seen.add(value);
+    return value.map((item) => sanitizeMetadataValue(item, seen));
+  }
 
   if (value && typeof value === 'object') {
-    return sanitizeMetadata(value as Record<string, unknown>);
+    if (seen.has(value)) return '[circular]';
+    return sanitizeMetadataRecord(value as Record<string, unknown>, seen);
   }
 
   return value;

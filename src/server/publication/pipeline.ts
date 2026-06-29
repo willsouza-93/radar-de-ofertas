@@ -168,22 +168,10 @@ export async function runPublicationPipeline(input: PublicationPipelineInput): P
 
     const result = await input.publisher.publish(createPublicationRequest({ job, message: renderedMessage }));
     const finishedJob = updateJobFromResult(job, result, input.now);
-    const retryDecision = result.status === 'ambiguous' && !result.failure
+    const retryFailure = failureForRetryFromResult(result);
+    const retryDecision = retryFailure
       ? decidePublicationRetry({
-          failure: {
-            category: 'ambiguous',
-            code: 'AMBIGUOUS_PUBLICATION_RESULT',
-            safeMessage: result.safeMessage,
-            retryable: false
-          },
-          attempt: finishedJob.attempt,
-          maxAttempts: input.publisher.limits.maxAttempts ?? 5,
-          now: input.now,
-          idempotencyKey: finishedJob.idempotencyKey
-        })
-      : result.failure
-      ? decidePublicationRetry({
-          failure: normalizeFailureForRetry(result.failure, result),
+          failure: retryFailure,
           attempt: finishedJob.attempt,
           maxAttempts: input.publisher.limits.maxAttempts ?? 5,
           now: input.now,
@@ -323,6 +311,32 @@ function normalizeFailureForRetry(
     ...failure,
     retryAfter: result.retryAfter
   };
+}
+
+function failureForRetryFromResult(result: PublicationResult): PublicationFailure | null {
+  if (result.status === 'ambiguous') {
+    return {
+      category: 'ambiguous',
+      code: result.failure?.code ?? 'AMBIGUOUS_PUBLICATION_RESULT',
+      safeMessage: result.failure?.safeMessage ?? result.safeMessage,
+      retryable: false
+    };
+  }
+
+  if (result.failure) return normalizeFailureForRetry(result.failure, result);
+
+  if (result.status === 'transient_failure') {
+    const failure: PublicationFailure = {
+      category: 'transient',
+      code: 'TRANSIENT_PUBLICATION_RESULT',
+      safeMessage: result.safeMessage,
+      retryable: true
+    };
+    if (result.retryAfter !== undefined) failure.retryAfter = result.retryAfter;
+    return failure;
+  }
+
+  return null;
 }
 
 function errorToPublicationResult(error: {

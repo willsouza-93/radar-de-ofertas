@@ -72,24 +72,37 @@ export function toPublicationError(error: unknown): PublicationError {
 
 function sanitizeErrorDetails(details: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   if (!details) return undefined;
+  return sanitizeErrorRecord(details, new WeakSet<object>());
+}
 
+function sanitizeErrorRecord(
+  details: Record<string, unknown>,
+  seen: WeakSet<object>
+): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {};
+  seen.add(details);
+
   for (const [key, value] of Object.entries(details)) {
     if (isSensitiveKey(key)) {
       sanitized[key] = '[redacted]';
       continue;
     }
-    sanitized[key] = sanitizeErrorValue(value);
+    sanitized[key] = sanitizeErrorValue(value, seen);
   }
 
   return sanitized;
 }
 
-function sanitizeErrorValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map((item) => sanitizeErrorValue(item));
+function sanitizeErrorValue(value: unknown, seen: WeakSet<object>): unknown {
+  if (Array.isArray(value)) {
+    if (seen.has(value)) return '[circular]';
+    seen.add(value);
+    return value.map((item) => sanitizeErrorValue(item, seen));
+  }
 
   if (value && typeof value === 'object') {
-    return sanitizeErrorDetails(value as Record<string, unknown>);
+    if (seen.has(value)) return '[circular]';
+    return sanitizeErrorRecord(value as Record<string, unknown>, seen);
   }
 
   return value;

@@ -113,13 +113,16 @@ Cenarios cobertos:
   - erro ambiguo lancado pelo publisher;
   - `retryAfter` top-level do publisher;
   - oferta stale retornando falha estruturada.
+  - resultado ambiguo com failure retryable;
+  - resultado transitorio sem payload `failure`;
+  - detalhes/metadata com referencia circular.
 
 ## Validacoes locais
 
 | Comando | Resultado |
 | --- | --- |
 | `npm.cmd run typecheck` | Passou |
-| `npm.cmd test` | Passou: 17 arquivos de teste, 136 testes |
+| `npm.cmd test` | Passou: 17 arquivos de teste, 138 testes |
 | `npm.cmd run build` | Passou |
 | `git diff --check` | Passou |
 

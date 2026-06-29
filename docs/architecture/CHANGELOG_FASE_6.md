@@ -186,4 +186,10 @@ Supabase, staging, producao, publisher real, scheduler ou integracoes externas.
 - Pipeline passou a preservar `retryAfter` top-level retornado pelo publisher.
 - Pipeline passou a marcar falhas ambiguas lancadas pelo publisher como
   `ambiguous`/`paused`, exigindo reconciliacao manual.
+- Pipeline passou a tratar todo resultado `ambiguous` como revisao manual,
+  mesmo quando o payload inclui `failure` retryable.
+- Pipeline passou a sintetizar falha transitoria para `transient_failure` sem
+  payload `failure`, preservando `retryAfter` quando existir.
+- Sanitizacao de erros e observabilidade passou a lidar com referencias
+  circulares sem quebrar a construcao de falhas seguras.
 - Testes unitarios ampliados para cobrir edge cases encontrados no review.

@@ -327,6 +327,10 @@ describe('publication jobs, publisher contract, retry and observability', () => 
   });
 
   it('sanitizes sensitive metadata and error details', () => {
+    const cyclicMetadata: Record<string, unknown> = { token: 'secret-token' };
+    cyclicMetadata.self = cyclicMetadata;
+    const cyclicDetails: Record<string, unknown> = { apiKey: 'secret-key' };
+    cyclicDetails.self = cyclicDetails;
     const event = createPublicationEvent({
       eventName: 'PublicationFailed',
       workspaceId: 'workspace-1',
@@ -334,21 +338,28 @@ describe('publication jobs, publisher contract, retry and observability', () => 
       status: 'failed',
       safeMessage: 'Falha segura.',
       createdAt: now,
-      metadata: { token: 'secret-token', channel: 'generic', nested: { authorization: 'Bearer secret' } }
+      metadata: { token: 'secret-token', channel: 'generic', nested: { authorization: 'Bearer secret' }, cyclicMetadata }
     });
     const error = new PublicationError('Unsafe internals.', {
       code: 'UNSAFE',
       safeMessage: 'Mensagem segura.',
       category: 'publisher',
-      details: { apiKey: 'secret-key', provider: { headers: { authorization: 'Bearer secret' } }, target: 'target-1' }
+      details: {
+        apiKey: 'secret-key',
+        provider: { headers: { authorization: 'Bearer secret' } },
+        cyclicDetails,
+        target: 'target-1'
+      }
     });
 
     expect(event.metadata?.token).toBe('[redacted]');
     expect((event.metadata?.nested as Record<string, unknown>).authorization).toBe('[redacted]');
+    expect((event.metadata?.cyclicMetadata as Record<string, unknown>).self).toBe('[circular]');
     expect(error.details?.apiKey).toBe('[redacted]');
     expect(
       (((error.details?.provider as Record<string, unknown>).headers as Record<string, unknown>).authorization)
     ).toBe('[redacted]');
+    expect((error.details?.cyclicDetails as Record<string, unknown>).self).toBe('[circular]');
     expect(error.safeMessage).toBe('Mensagem segura.');
   });
 });
@@ -441,6 +452,22 @@ describe('publication pipeline', () => {
     expect(output.events.map((event) => event.eventName)).toContain('PublicationRetried');
   });
 
+  it('synthesizes retries for transient results without failure payloads', async () => {
+    const output = await runPublicationPipeline(
+      pipelineInput(
+        fakePublisher({
+          status: 'transient_failure',
+          safeMessage: 'Rate limit.',
+          retryAfter: '2026-06-28T12:15:00.000Z'
+        })
+      )
+    );
+
+    expect(output.retryDecision?.retry).toBe(true);
+    expect(output.retryDecision?.retryAt).toBe('2026-06-28T12:15:00.000Z');
+    expect(output.events.map((event) => event.eventName)).toContain('PublicationRetried');
+  });
+
   it('preserves top-level retryAfter from publisher results', async () => {
     const output = await runPublicationPipeline(
       pipelineInput(
@@ -500,6 +527,28 @@ describe('publication pipeline', () => {
     expect(output.job?.status).toBe('paused');
     expect(output.retryDecision?.retry).toBe(false);
     expect(output.retryDecision?.manualReviewRequired).toBe(true);
+  });
+
+  it('treats every ambiguous result as manual-review only even with retryable failure details', async () => {
+    const output = await runPublicationPipeline(
+      pipelineInput(
+        fakePublisher({
+          status: 'ambiguous',
+          safeMessage: 'Resultado ambiguo.',
+          failure: {
+            category: 'transient',
+            code: 'PROVIDER_TIMEOUT_AFTER_SEND',
+            safeMessage: 'Timeout apos envio.',
+            retryable: true
+          }
+        })
+      )
+    );
+
+    expect(output.job?.status).toBe('paused');
+    expect(output.retryDecision?.retry).toBe(false);
+    expect(output.retryDecision?.manualReviewRequired).toBe(true);
+    expect(output.events.map((event) => event.eventName)).not.toContain('PublicationRetried');
   });
 
   it('requires manual review for ambiguous results without a failure payload', async () => {
