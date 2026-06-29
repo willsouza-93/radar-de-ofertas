@@ -84,6 +84,7 @@ describe('publication domain candidate', () => {
     const cancelled = cancelPublicationCandidate(queued, now);
     const expired = expirePublicationCandidate(markCandidateEligible(baseCandidate('candidate-2'), now), now);
     const blocked = blockPublicationCandidate(baseCandidate('candidate-3'), blockDecision(), now);
+    const stillBlocked = blockPublicationCandidate(blocked, blockDecision(), now);
 
     expect(eligible.status).toBe('eligible');
     expect(queued.status).toBe('queued');
@@ -91,6 +92,7 @@ describe('publication domain candidate', () => {
     expect(expired.status).toBe('expired');
     expect(blocked.status).toBe('blocked');
     expect(blocked.blockedReason).toBe('COOLDOWN_ACTIVE');
+    expect(stillBlocked.status).toBe('blocked');
   });
 });
 
@@ -377,6 +379,28 @@ describe('publication pipeline', () => {
       'PublicationStarted',
       'PublicationSucceeded'
     ]);
+  });
+
+  it('does not schedule retries for malformed successful results with stale failures', async () => {
+    const output = await runPublicationPipeline(
+      pipelineInput(
+        fakePublisher({
+          status: 'success',
+          safeMessage: 'Publicado com sucesso.',
+          externalMessageId: 'external-1',
+          failure: {
+            category: 'transient',
+            code: 'STALE_FAILURE',
+            safeMessage: 'Falha obsoleta.',
+            retryable: true
+          }
+        })
+      )
+    );
+
+    expect(output.job?.status).toBe('succeeded');
+    expect(output.retryDecision).toBeNull();
+    expect(output.events.map((event) => event.eventName)).not.toContain('PublicationRetried');
   });
 
   it('blocks target disabled before rendering or publisher calls', async () => {

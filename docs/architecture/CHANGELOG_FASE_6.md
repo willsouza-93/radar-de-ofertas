@@ -190,6 +190,10 @@ Supabase, staging, producao, publisher real, scheduler ou integracoes externas.
   mesmo quando o payload inclui `failure` retryable.
 - Pipeline passou a sintetizar falha transitoria para `transient_failure` sem
   payload `failure`, preservando `retryAfter` quando existir.
+- Pipeline passou a ignorar payload `failure` inconsistente quando o status do
+  publisher e `success`, evitando retry de mensagem ja registrada como sucesso.
+- Candidate passou a permitir reavaliacao `blocked -> blocked`, preservando o
+  estado bloqueado quando a mesma politica continua ativa.
 - Sanitizacao de erros e observabilidade passou a lidar com referencias
   circulares sem quebrar a construcao de falhas seguras.
 - Testes unitarios ampliados para cobrir edge cases encontrados no review.

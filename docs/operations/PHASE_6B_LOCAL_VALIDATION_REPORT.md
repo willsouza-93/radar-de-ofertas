@@ -116,13 +116,15 @@ Cenarios cobertos:
   - resultado ambiguo com failure retryable;
   - resultado transitorio sem payload `failure`;
   - detalhes/metadata com referencia circular.
+  - resultado de sucesso com payload `failure` obsoleto;
+  - reavaliacao de candidate bloqueado mantendo `blocked`.
 
 ## Validacoes locais
 
 | Comando | Resultado |
 | --- | --- |
 | `npm.cmd run typecheck` | Passou |
-| `npm.cmd test` | Passou: 17 arquivos de teste, 138 testes |
+| `npm.cmd test` | Passou: 17 arquivos de teste, 139 testes |
 | `npm.cmd run build` | Passou |
 | `git diff --check` | Passou |
 

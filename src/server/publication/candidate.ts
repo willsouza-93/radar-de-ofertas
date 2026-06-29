@@ -160,7 +160,7 @@ function ensureCandidateCanTransition(from: PublicationCandidate['status'], to: 
   const allowed: Record<PublicationCandidate['status'], PublicationCandidate['status'][]> = {
     created: ['eligible', 'blocked', 'cancelled', 'expired'],
     eligible: ['queued', 'blocked', 'cancelled', 'expired'],
-    blocked: ['eligible', 'cancelled', 'expired'],
+    blocked: ['eligible', 'blocked', 'cancelled', 'expired'],
     queued: ['cancelled'],
     cancelled: [],
     expired: []

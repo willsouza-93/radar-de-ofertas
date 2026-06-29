@@ -314,6 +314,8 @@ function normalizeFailureForRetry(
 }
 
 function failureForRetryFromResult(result: PublicationResult): PublicationFailure | null {
+  if (result.status === 'success') return null;
+
   if (result.status === 'ambiguous') {
     return {
       category: 'ambiguous',
