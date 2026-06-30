@@ -22,6 +22,7 @@ export function getActionErrorMessage(code: string | string[] | undefined): stri
     FORBIDDEN: 'Seu perfil nao tem acesso a esta acao.',
     NOT_FOUND: 'Este item nao foi encontrado ou nao pertence ao seu workspace.',
     VALIDATION_ERROR: 'Revise os campos destacados.',
+    PUBLICATION_BLOCKED: 'Publicacao bloqueada por regra operacional.',
     ACTION_FAILED: 'Nao foi possivel concluir a acao. Recarregue e tente novamente.'
   };
 

@@ -87,6 +87,34 @@ type DecisionRow = {
   profiles?: { display_name: string | null } | { display_name: string | null }[] | null;
 };
 
+type PublicationCandidateRow = {
+  id: string;
+  status: 'created' | 'blocked' | 'queued';
+  safe_message: string | null;
+  created_at: string;
+};
+
+type PublicationJobRow = {
+  id: string;
+  candidate_id: string;
+  status: 'requested' | 'processing' | 'succeeded' | 'failed' | 'paused' | 'cancelled';
+  safe_message: string;
+  attempt_count: number;
+  failure_code: string | null;
+  retry_after_seconds: number | null;
+  external_message_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type PublicationAttemptRow = {
+  id: string;
+  job_id: string;
+  result: 'success' | 'transient_failure' | 'permanent_failure' | 'rate_limited' | 'ambiguous';
+  safe_message: string;
+  recorded_at: string;
+};
+
 export async function getDashboardData(session: AuthenticatedBackofficeSession) {
   const [
     pending,
@@ -205,7 +233,7 @@ export async function getOfferDetailData(
   if (offerError) throw new Error(offerError.message);
   if (!offerData) notFound();
 
-  const [tagsResult, snapshotsResult] = await Promise.all([
+  const [tagsResult, snapshotsResult, approvalResult, candidatesResult] = await Promise.all([
     supabase
       .from('offer_tags')
       .select('tags(id, name, slug, color, is_active)')
@@ -216,14 +244,34 @@ export async function getOfferDetailData(
       .select('id, workspace_id, offer_id, price, previous_price, discount_percent, coupon_code, free_shipping, observed_at')
       .eq('workspace_id', session.workspace.id)
       .eq('offer_id', offerId)
-      .order('observed_at', { ascending: false })
+      .order('observed_at', { ascending: false }),
+    supabase
+      .from('approval_queue')
+      .select('id, status, last_decision_id')
+      .eq('workspace_id', session.workspace.id)
+      .eq('offer_id', offerId)
+      .maybeSingle(),
+    supabase
+      .from('publication_candidates')
+      .select('id, status, safe_message, created_at')
+      .eq('workspace_id', session.workspace.id)
+      .eq('offer_id', offerId)
+      .order('created_at', { ascending: false })
   ]);
 
   if (tagsResult.error) throw new Error(tagsResult.error.message);
   if (snapshotsResult.error) throw new Error(snapshotsResult.error.message);
+  if (approvalResult.error) throw new Error(approvalResult.error.message);
+  if (candidatesResult.error) throw new Error(candidatesResult.error.message);
 
   const offer = offerData as OfferRow;
   const category = singleRelation(offer.categories);
+  const publication = await getOfferPublicationSummary(
+    supabase,
+    session.workspace.id,
+    approvalResult.data as { status: ApprovalStatus; last_decision_id: string | null } | null,
+    (candidatesResult.data ?? []) as PublicationCandidateRow[]
+  );
 
   return {
     offer: mapOfferRecord(offer, session.workspace.id),
@@ -258,7 +306,74 @@ export async function getOfferDetailData(
       coupon_code: string | null;
       free_shipping: boolean;
       observed_at: string;
-    }>).map(mapSnapshot)
+    }>).map(mapSnapshot),
+    publication
+  };
+}
+
+async function getOfferPublicationSummary(
+  supabase: SupabaseQueryClient,
+  workspaceId: string,
+  approval: { status: ApprovalStatus; last_decision_id: string | null } | null,
+  candidates: PublicationCandidateRow[]
+) {
+  if (candidates.length === 0) {
+    return {
+      approvalStatus: approval?.status ?? null,
+      lastDecisionId: approval?.last_decision_id ?? null,
+      latestJob: null,
+      latestAttempt: null
+    };
+  }
+
+  const candidateIds = candidates.map((candidate) => candidate.id);
+  const jobsResult = await supabase
+    .from('publication_jobs')
+    .select('id, candidate_id, status, safe_message, attempt_count, failure_code, retry_after_seconds, external_message_id, created_at, updated_at')
+    .eq('workspace_id', workspaceId)
+    .in('candidate_id', candidateIds)
+    .order('created_at', { ascending: false });
+
+  if (jobsResult.error) throw new Error(jobsResult.error.message);
+  const jobs = (jobsResult.data ?? []) as PublicationJobRow[];
+  const latestJob = jobs[0] ?? null;
+
+  let latestAttempt: PublicationAttemptRow | null = null;
+  if (latestJob) {
+    const attemptsResult = await supabase
+      .from('publication_attempts')
+      .select('id, job_id, result, safe_message, recorded_at')
+      .eq('workspace_id', workspaceId)
+      .eq('job_id', latestJob.id)
+      .order('recorded_at', { ascending: false })
+      .limit(1);
+
+    if (attemptsResult.error) throw new Error(attemptsResult.error.message);
+    latestAttempt = ((attemptsResult.data ?? []) as PublicationAttemptRow[])[0] ?? null;
+  }
+
+  return {
+    approvalStatus: approval?.status ?? null,
+    lastDecisionId: approval?.last_decision_id ?? null,
+    latestJob: latestJob
+      ? {
+          id: latestJob.id,
+          status: latestJob.status,
+          safeMessage: latestJob.safe_message,
+          attemptCount: latestJob.attempt_count,
+          failureCode: latestJob.failure_code,
+          retryAfterSeconds: latestJob.retry_after_seconds,
+          externalMessageId: latestJob.external_message_id,
+          updatedAt: latestJob.updated_at
+        }
+      : null,
+    latestAttempt: latestAttempt
+      ? {
+          result: latestAttempt.result,
+          safeMessage: latestAttempt.safe_message,
+          recordedAt: latestAttempt.recorded_at
+        }
+      : null
   };
 }
 

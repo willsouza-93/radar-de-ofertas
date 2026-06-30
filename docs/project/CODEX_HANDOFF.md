@@ -38,6 +38,9 @@ mesmo PR da mudanca que revelou a inconsistencia.
 - Capture domain e manual connector implementados.
 - RPC `submit_capture_for_review` implementada para submeter ofertas a review.
 - Publication domain implementado como dominio puro, sem canal real.
+- Telegram Publisher implementado em branch de review com persistencia, RPCs,
+  redirect publico e UI Admin-only. Validacao pgTAP/advisors pendente por
+  falha local de inicializacao do Supabase.
 
 ## Principais decisoes
 
@@ -50,7 +53,7 @@ mesmo PR da mudanca que revelou a inconsistencia.
   historico em `approval_decisions` e `review_notes`.
 - `affiliateUrl` nao identifica oferta.
 - Deduplication e Editorial Cooldown sao conceitos separados.
-- Publisher e contrato; Telegram sera adapter futuro.
+- Publisher e contrato; Telegram e adapter de infraestrutura na Fase 6C.
 - Resultado ambiguo de publicacao nao gera retry automatico.
 - Mensagem publicavel exige redirect controlado `/r/{shortCode}`.
 - Domain Events/Event Bus ainda nao foram implementados.
@@ -69,7 +72,8 @@ mesmo PR da mudanca que revelou a inconsistencia.
 
 ## Limitacoes atuais
 
-- Sem Telegram publisher real.
+- Telegram Publisher da Fase 6C ainda depende de review, merge, envs e smoke
+  controlado para uso real.
 - Sem scheduler.
 - Sem marketplace API real.
 - Sem scraping.
@@ -90,9 +94,6 @@ mesmo PR da mudanca que revelou a inconsistencia.
 
 ## Funcionalidades ainda nao implementadas
 
-- Telegram Bot API adapter.
-- Persistencia de publication candidates/jobs/history.
-- Redirect links persistidos para publicacao real.
 - Click analytics publico conectado a publicacao real.
 - Scheduler de captura/publicacao.
 - Registry/feature flags operacionais reais.

@@ -161,6 +161,69 @@ Supabase, staging, producao, publisher real, scheduler ou integracoes externas.
 - Nao ha permissao/RBAC nesta camada porque o dominio e puro; validacao de
   ator ficara na camada de aplicacao futura.
 
+## Fase 6C - Telegram Publisher
+
+Status: implementada em branch para review. Sem merge, sem staging, sem
+mensagem real ao Telegram e sem migrations remotas.
+
+### Implementado
+
+- Criada persistencia minima de publicacao:
+  - `publication_candidates`;
+  - `publication_jobs`;
+  - `publication_attempts`;
+  - `publication_redirect_links`.
+- Criadas RPCs controladas:
+  - `request_telegram_publication(offer_id)`;
+  - `claim_telegram_publication_job(job_id, rendered_message, metadata, run_id)`;
+  - `record_telegram_publication_result(job_id, result, ...)`;
+  - `resolve_publication_redirect(short_code)`.
+- Aplicado RLS nas novas tabelas:
+  - `anon` nao acessa tabelas internas;
+  - Admin e Editor leem historico do proprio workspace;
+  - DML direto em candidate, job, attempt e redirect nao e concedido ao
+    cliente.
+- Implementado `TelegramPublisher` em `src/server/publishers/telegram`:
+  - usa `fetch` nativo;
+  - usa apenas `sendMessage`;
+  - suporta apenas texto simples;
+  - normaliza sucesso, erro explicito, rate limit, timeout/rede e resposta
+    invalida;
+  - nao registra token, headers, body bruto ou URL com token.
+- Implementado template fixo `telegram-mvp-v1` usando o renderer da Fase 6B.
+- Implementado redirect publico `/r/{shortCode}` via route handler Next.js.
+- Implementada UI minima no detalhe de oferta:
+  - Admin publica manualmente oferta aprovada;
+  - Editor ve status, mas nao publica;
+  - confirmacao explicita obrigatoria;
+  - estados seguros de configuracao ausente, bloqueio, falha e sucesso.
+
+### Decisoes tecnicas
+
+- Telegram ficou restrito a adapter de infraestrutura; o core de publicacao
+  continua sem Bot API, token ou chat ID.
+- O target Telegram do MVP e fixo e server-side: `telegram-default`.
+- `TELEGRAM_PUBLISHING_ENABLED` atua como kill switch simples, sem substituir
+  registry/feature flags futuros da Fase 6D.
+- `claim_telegram_publication_job` recebe a mensagem renderizada apenas pela
+  camada server-side, nunca pela UI. Isso preserva o uso do renderer TypeScript
+  da Fase 6B sem aceitar texto arbitrario do cliente.
+- Resultado ambiguo coloca o job em `paused` e bloqueia nova claim automatica.
+- Job `failed` tambem nao e reclamado automaticamente por novo clique; retry
+  manual/reconciliacao formal ficam fora da Fase 6C.
+
+### Fora de escopo mantido
+
+- Scheduler.
+- Publicacao automatica.
+- Telegram webhooks ou `getUpdates`.
+- Markdown/HTML, media, botoes inline ou uploads.
+- Registry de publishers/targets.
+- Click analytics.
+- Event Bus.
+- Staging/producao.
+- Mensagens reais durante teste, build, CI ou validacao local padrao.
+
 ## Review Fase 6B
 
 - Endurecida validacao do template renderer para rejeitar:

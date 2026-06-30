@@ -7,14 +7,14 @@ mudanca que altere o estado da `main`.
 
 | Campo | Valor |
 | --- | --- |
-| Versao atual | Pos-Fase 6B, sem tag nova registrada neste documento |
+| Versao atual | Fase 6C em review, sem tag nova registrada neste documento |
 | Ultima fase concluida | Fase 6B - Publication Domain Implementation |
-| Status do projeto | MVP interno com captura, curadoria, UI navegavel e dominio de publicacao |
+| Status do projeto | MVP interno com captura, curadoria, UI navegavel, dominio de publicacao e Telegram Publisher em review |
 | Branch principal | `main` |
 | Ultima tag conhecida | `v0.3.0` |
-| Fase em andamento | Nenhuma registrada na `main` |
-| Proxima fase planejada | Fase 6C - Telegram Publisher |
-| Ultima atualizacao | 2026-06-29 |
+| Fase em andamento | Fase 6C - Telegram Publisher |
+| Proxima fase planejada | Fase 6D - Registry/feature flags operacionais |
+| Ultima atualizacao | 2026-06-30 |
 
 ## Fases concluidas
 
@@ -26,6 +26,9 @@ mudanca que altere o estado da `main`.
 - Fase 5: capture domain, manual connector e submissao para review.
 - Fase 6A: arquitetura de publicacao.
 - Fase 6B: dominio interno de publicacao.
+- Fase 6C: Telegram Publisher em branch de review, com persistencia, RPCs,
+  redirect e UI Admin-only. Pendente validar pgTAP/advisors quando Supabase
+  local iniciar.
 
 ## Leitura rapida
 

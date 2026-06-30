@@ -68,10 +68,12 @@ Politica: [LIVING_DOCUMENTATION_POLICY.md](LIVING_DOCUMENTATION_POLICY.md)
 | `approval_queue.last_decision_id` deve apontar decisao atual | [PHASE_6_PUBLICATION_ARCHITECTURE.md](../architecture/PHASE_6_PUBLICATION_ARCHITECTURE.md) |
 | Publisher e contrato generico | [PUBLISHER_ARCHITECTURE.md](../architecture/PUBLISHER_ARCHITECTURE.md) |
 | Telegram sera adapter futuro, nao core | [PUBLISHER_ARCHITECTURE.md](../architecture/PUBLISHER_ARCHITECTURE.md), [PHASE_6_ROADMAP.md](../architecture/PHASE_6_ROADMAP.md) |
+| Telegram Publisher da Fase 6C usa target fixo server-side, sem registry | [CHANGELOG_FASE_6.md](../architecture/CHANGELOG_FASE_6.md), [TELEGRAM_PUBLISHER_SETUP.md](../operations/TELEGRAM_PUBLISHER_SETUP.md) |
 | Candidate nasce antes da policy bloquear/liberar | [PUBLICATION_CANDIDATE.md](../architecture/PUBLICATION_CANDIDATE.md) |
 | Idempotency key inclui ciclo editorial/snapshot | [PUBLICATION_POLICY.md](../architecture/PUBLICATION_POLICY.md) |
 | Renderer usa snapshot aprovado imutavel | [PUBLICATION_TEMPLATE_ARCHITECTURE.md](../architecture/PUBLICATION_TEMPLATE_ARCHITECTURE.md) |
 | Redirect `/r/{shortCode}` e obrigatorio | [PUBLICATION_TEMPLATE_ARCHITECTURE.md](../architecture/PUBLICATION_TEMPLATE_ARCHITECTURE.md) |
+| Publicacao Telegram manual exige Admin e confirmacao explicita | [CHANGELOG_FASE_6.md](../architecture/CHANGELOG_FASE_6.md), [PHASE_6C_LOCAL_VALIDATION_REPORT.md](../operations/PHASE_6C_LOCAL_VALIDATION_REPORT.md) |
 | Resultado ambiguo nao tem retry automatico | [PUBLICATION_RETRY_STRATEGY.md](../architecture/PUBLICATION_RETRY_STRATEGY.md), [PUBLICATION_FAILURE_HANDLING.md](../architecture/PUBLICATION_FAILURE_HANDLING.md) |
 | Domain Events/Event Bus ficam para evolucao futura | [DOMAIN_EVENTS_EVOLUTION.md](../architecture/DOMAIN_EVENTS_EVOLUTION.md) |
 

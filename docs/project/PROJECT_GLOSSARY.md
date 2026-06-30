@@ -111,8 +111,8 @@ renderizada, job conceitual, publisher request e result.
 
 ## Publication Job
 
-Unidade executavel de publicacao. Na Fase 6B existe apenas em memoria; futura
-fase deve persistir.
+Unidade executavel de publicacao. Na Fase 6C passa a ser persistida para o
+publisher Telegram manual.
 
 ## Publication Policy
 
@@ -143,6 +143,12 @@ Entrada bruta produzida por connector antes de normalizacao.
 Link controlado `/r/{shortCode}` usado para preservar analytics, seguranca e
 governanca de cliques. Mensagens publicaveis devem usar redirect, nao link
 bruto.
+
+## Telegram Publisher
+
+Primeiro adapter real de publicacao. Usa Bot API `sendMessage` com texto
+simples, target fixo server-side, kill switch por env e sem retry automatico no
+MVP.
 
 ## Review
 

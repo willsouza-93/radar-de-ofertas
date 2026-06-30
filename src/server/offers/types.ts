@@ -131,6 +131,27 @@ export interface OfferDetail {
   category: CategoryRecord | null;
   tags: TagRecord[];
   priceSnapshots: PriceSnapshotRecord[];
+  publication: OfferPublicationSummary;
+}
+
+export interface OfferPublicationSummary {
+  approvalStatus: 'pending' | 'approved' | 'rejected' | null;
+  lastDecisionId: string | null;
+  latestJob: {
+    id: string;
+    status: 'requested' | 'processing' | 'succeeded' | 'failed' | 'paused' | 'cancelled';
+    safeMessage: string;
+    attemptCount: number;
+    failureCode: string | null;
+    retryAfterSeconds: number | null;
+    externalMessageId: string | null;
+    updatedAt: string;
+  } | null;
+  latestAttempt: {
+    result: 'success' | 'transient_failure' | 'permanent_failure' | 'rate_limited' | 'ambiguous';
+    safeMessage: string;
+    recordedAt: string;
+  } | null;
 }
 
 export interface StructuredLogger {

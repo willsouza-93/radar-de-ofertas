@@ -23,7 +23,10 @@
 | `VERCEL_ORG_ID` | Futuro | GitHub Secrets | Nao sensivel, mas privado | Deploy via CI, se adotado | Willian Cesar |
 | `VERCEL_PROJECT_ID` | Futuro | GitHub Secrets | Nao sensivel, mas privado | Deploy via CI, se adotado | Willian Cesar |
 | `CRON_SECRET` | Pos-MVP ou jobs futuros | Vercel, GitHub Secrets se necessario | Nao | Protecao de rotas de cron | Willian Cesar |
-| `TELEGRAM_BOT_TOKEN` | Fase futura | Vercel | Nao | Publicacao Telegram | Willian Cesar |
+| `TELEGRAM_BOT_TOKEN` | Fase 6C | Vercel/local server-side | Nao | Token do bot Telegram para `sendMessage` | Willian Cesar |
+| `TELEGRAM_DEFAULT_CHAT_ID` | Fase 6C | Vercel/local server-side | Nao | Destino Telegram fixo do MVP | Willian Cesar |
+| `TELEGRAM_PUBLISHING_ENABLED` | Fase 6C | Vercel/local server-side | Nao | Kill switch simples do publisher Telegram | Willian Cesar |
+| `APP_URL` | Fase 6C | Vercel/local server-side | Nao sensivel | Origem publica usada no redirect `/r/{shortCode}` | Willian Cesar |
 
 ## Local
 
