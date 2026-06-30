@@ -35,3 +35,10 @@ export const manualImportActionSchema = z
     payload: z.string().trim().min(2).max(200_000)
   })
   .strict();
+
+export const telegramPublicationActionSchema = z
+  .object({
+    offerId: curationActionUuidSchema,
+    confirm: z.literal('yes')
+  })
+  .strict();

@@ -320,7 +320,13 @@ class InMemoryOfferRepository implements OfferRepository {
       offer,
       category: offer.categoryId ? await this.getCategory(workspaceId, offer.categoryId) : null,
       tags: this.tags.filter((tag) => tag.workspaceId === workspaceId && tagIds.has(tag.id)),
-      priceSnapshots: await this.listPriceSnapshots(workspaceId, offer.id)
+      priceSnapshots: await this.listPriceSnapshots(workspaceId, offer.id),
+      publication: {
+        approvalStatus: null,
+        lastDecisionId: null,
+        latestJob: null,
+        latestAttempt: null
+      }
     };
   }
 }

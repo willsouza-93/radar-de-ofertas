@@ -33,6 +33,7 @@ Escopo MVP:
 - ofertas, score deterministico, snapshots de preco;
 - curadoria, notas e decisoes;
 - dominio interno de publicacao desacoplado de canais.
+- Telegram Publisher manual em review, ainda sem smoke real.
 
 Escopo futuro:
 
@@ -54,11 +55,13 @@ Fases concluidas:
 - Fase 5: capture domain, manual connector e RPC de submissao para review.
 - Fase 6A: arquitetura de publicacao.
 - Fase 6B: dominio interno de publicacao.
+- Fase 6C: Telegram Publisher manual/Admin-only em branch de review.
 
 Versao/tag mais recente conhecida:
 
 - `v0.3.0` foi usada para Fase 3B.
 - A Fase 6B ja foi mergeada na `main` antes deste kit documental.
+- `feature/phase-6c-telegram-publisher`: branch da Fase 6C em review.
 
 Branches recentes/relevantes:
 
@@ -115,8 +118,9 @@ Fontes:
 ### Publication
 
 Responsavel por transformar oferta aprovada em candidate, policy decision,
-mensagem renderizada, job conceitual, publisher contract e result. O core nao
-conhece Telegram, WhatsApp ou qualquer canal concreto.
+mensagem renderizada, job persistido, publisher contract e result. O core nao
+conhece Telegram, WhatsApp ou qualquer canal concreto. Na Fase 6C, Telegram e
+adapter de infraestrutura.
 
 Fontes:
 
@@ -185,14 +189,13 @@ Entrada manual/import
   -> Template Renderer
   -> Publication Job
   -> Publisher Contract
-  -> Channel Adapter futuro
+  -> Telegram Adapter MVP
 ```
 
 ## Roadmap resumido
 
 Proximas fases recomendadas:
 
-- 6C: Telegram Publisher como primeiro adapter real.
 - 6D: registry/feature flags operacionais para publishers e conectores.
 - 6E: conector de marketplace oficial ou import estruturado aprovado.
 - 6F: scheduler apenas depois de idempotencia e publisher real estaveis.

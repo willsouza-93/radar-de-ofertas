@@ -92,6 +92,7 @@ button {
 
 button:disabled {
   cursor: not-allowed;
+  opacity: 0.62;
 }
 
 :focus-visible {
@@ -637,6 +638,43 @@ tbody tr:hover {
 
 .mobile-card-list {
   display: none;
+}
+
+.alert {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.alert-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.alert-warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.alert-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  color: var(--foreground);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.checkbox-row input {
+  margin-top: 0.25rem;
 }
 
 .login-page {

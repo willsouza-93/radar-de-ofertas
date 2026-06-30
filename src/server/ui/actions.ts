@@ -7,12 +7,14 @@ import { createSupabaseServerClient } from '@/server/supabase/server';
 import { importManualOffers } from '@/server/capture/manual-import';
 import { SupabaseCapturePersistenceRepository } from '@/server/capture/supabase-persistence';
 import { AppError } from '@/server/offers/errors';
+import { executeTelegramPublicationWorkflow } from '@/server/publication/telegram-workflow';
 import {
   approveActionSchema,
   loginActionSchema,
   manualImportActionSchema,
   noteActionSchema,
-  rejectActionSchema
+  rejectActionSchema,
+  telegramPublicationActionSchema
 } from '@/server/ui/action-schemas';
 
 type ActionErrorCode =
@@ -20,6 +22,7 @@ type ActionErrorCode =
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'VALIDATION_ERROR'
+  | 'PUBLICATION_BLOCKED'
   | 'ACTION_FAILED';
 
 export async function signInAction(formData: FormData): Promise<void> {
@@ -140,6 +143,35 @@ export async function rejectOfferAction(formData: FormData): Promise<void> {
   redirect(`/curation/${parsed.queueId}`);
 }
 
+export async function publishTelegramOfferAction(formData: FormData): Promise<void> {
+  const parsed = telegramPublicationActionSchema.safeParse({
+    offerId: formData.get('offerId'),
+    confirm: formData.get('confirm')
+  });
+  if (!parsed.success) redirect('/offers?publicationError=VALIDATION_ERROR');
+
+  const supabase = await requireSupabaseForAction();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) redirect('/login');
+
+  let redirectUrl: string;
+  try {
+    const result = await executeTelegramPublicationWorkflow({
+      supabase,
+      offerId: parsed.data.offerId
+    });
+
+    revalidatePath(`/offers/${parsed.data.offerId}`);
+    redirectUrl = `/offers/${parsed.data.offerId}?publicationStatus=${result.status}`;
+  } catch (error) {
+    const code = toActionErrorCode(error as { code?: string; message?: string });
+    revalidatePath(`/offers/${parsed.data.offerId}`);
+    redirect(`/offers/${parsed.data.offerId}?publicationError=${code}`);
+  }
+
+  redirect(redirectUrl);
+}
+
 async function applyDecision(
   queueId: string,
   decision: 'approved' | 'rejected',
@@ -169,6 +201,9 @@ function toActionErrorCode(error: { code?: string; message?: string }): ActionEr
   if (error.code === 'P0002') return 'NOT_FOUND';
   if (error.code === '23514' || error.code === '23503' || error.code === '22P02') {
     return 'VALIDATION_ERROR';
+  }
+  if (error.message === 'PUBLICATION_REQUEST_EMPTY' || error.message === 'PUBLICATION_CLAIM_EMPTY') {
+    return 'PUBLICATION_BLOCKED';
   }
   return 'ACTION_FAILED';
 }
